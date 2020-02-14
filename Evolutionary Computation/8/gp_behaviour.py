@@ -19,13 +19,13 @@ def protected_div(numerator, denominator):
 
 
 def protected_log(arg):
-    if arg > 0:
-        return np.log(arg)
+    if arg != 0:
+        return np.log(abs(arg))
     else:
-        return 1
+        return 0
 
 
-def eval_symb_reg(individual, points):
+def fitness_function(individual, points):
     # Transform the tree expression in a callable function
     func = toolbox.compile(expr=individual)
     # Evaluate the mean squared error between the expression
@@ -40,7 +40,7 @@ pset.addPrimitive(operator.add, 2)
 pset.addPrimitive(operator.sub, 2)
 pset.addPrimitive(operator.mul, 2)
 pset.addPrimitive(protected_div, 2)
-#pset.addPrimitive(protected_log, 1)
+pset.addPrimitive(protected_log, 1)
 pset.addPrimitive(math.exp, 1)
 pset.addPrimitive(math.sin, 1)
 pset.addPrimitive(math.cos, 1)
@@ -54,7 +54,7 @@ toolbox.register("individual", tools.initIterate, creator.Individual, toolbox.ex
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 toolbox.register("compile", gp.compile, pset=pset)
 
-toolbox.register("evaluate", eval_symb_reg, points=data_points)
+toolbox.register("evaluate", fitness_function, points=data_points)
 toolbox.register("select", tools.selTournament, tournsize=3)
 toolbox.register("mate", gp.cxOnePoint)
 toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
@@ -64,36 +64,56 @@ toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
 #toolbox.decorate("mutate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
 
 def main():
-    random.seed(319)
+    random.seed(167)
 
-    pop = toolbox.population(n=1000)
-    hof = tools.HallOfFame(1)
+    population_size = 1000
+    crossover_rate = 0.7
+    mutation_rate = 0
+    number_of_generations = 50
 
-    stats_fit = tools.Statistics(lambda ind: ind.fitness.values)
-    stats_size = tools.Statistics(len)
-    mstats = tools.MultiStatistics(fitness=stats_fit, size=stats_size)
-    mstats.register("avg", np.mean)
-    mstats.register("std", np.std)
-    mstats.register("min", np.min)
-    mstats.register("max", np.max)
+    pop = toolbox.population(n=population_size)
 
+    # Evaluate the entire population
+    fitnesses = map(toolbox.evaluate, pop)
+    for ind, fit in zip(pop, fitnesses):
+        ind.fitness.values = fit
 
-    pop, logbook = algorithms.eaSimple(pop, toolbox, 0.7, 0, 50, stats=mstats,
-                                   halloffame=hof, verbose=True)
+    best_individuals = []
+    for g in range(number_of_generations):
+        # Select the next generation individuals
+        offspring = toolbox.select(pop, len(pop))
+        # Clone the selected individuals
+        offspring = map(toolbox.clone, offspring)
 
-    gen = logbook.select("gen")
-    fit_mins = logbook.chapters["fitness"].select("min")
-    size_avgs = logbook.chapters["size"].select("avg")
+        # Apply crossover and mutation on the offspring
+        offspring = algorithms.varAnd(offspring, toolbox, crossover_rate, mutation_rate)
 
+        # Evaluate the individuals with an invalid fitness
+        invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+        fitnesses = map(toolbox.evaluate, invalid_ind)
+        (best_fitness, best_ind) = (math.inf, None)
+        for ind, fit in zip(invalid_ind, fitnesses):
+            ind.fitness.values = fit
+            if fit[0] < best_fitness:
+                (best_fitness, best_ind) = (fit[0], ind)
+
+        best_individuals.append(best_ind)
+        # The population is entirely replaced by the offspring
+        pop[:] = offspring
+
+    best_fitnesses = [ind.fitness.values for ind in best_individuals]
+    best_sizes = [len(ind) for ind in best_individuals]
+
+    # plot the results
     fig, ax1 = plt.subplots()
-    line1 = ax1.plot(gen, fit_mins, "b-", label="Minimum Fitness")
+    line1 = ax1.plot(range(1, number_of_generations + 1), best_fitnesses, "b-", label="Best Fitness")
     ax1.set_xlabel("Generation")
     ax1.set_ylabel("Fitness", color="b")
     for tl in ax1.get_yticklabels():
         tl.set_color("b")
 
     ax2 = ax1.twinx()
-    line2 = ax2.plot(gen, size_avgs, "r-", label="Average Size")
+    line2 = ax2.plot(range(1, number_of_generations + 1), best_sizes, "r-", label="Best Size")
     ax2.set_ylabel("Size", color="r")
     for tl in ax2.get_yticklabels():
         tl.set_color("r")
@@ -104,7 +124,10 @@ def main():
 
     plt.show()
 
-    return pop, logbook, hof
+    final = best_individuals[-1]
+    nodes, edges, labels = gp.graph(final)
+
+    return final
 
 
 if __name__ == "__main__":
