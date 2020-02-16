@@ -14,17 +14,11 @@ data_points = [(-1, 0), (-0.9, -0.1629), (-0.8, -0.2624), (-0.7, -0.3129), (-0.6
 
 
 def protected_div(numerator, denominator):
-    if denominator != 0:
-        return numerator / denominator
-    else:
-        return 1
+    return numerator / denominator if denominator != 0 else 1
 
 
 def protected_log(arg):
-    if arg != 0:
-        return np.log(abs(arg))
-    else:
-        return 0
+    return np.log(abs(arg)) if arg != 0 else 0
 
 
 def fitness_function(individual, points):
@@ -45,6 +39,7 @@ pset.addPrimitive(protected_log, 1)
 pset.addPrimitive(math.exp, 1)
 pset.addPrimitive(math.sin, 1)
 pset.addPrimitive(math.cos, 1)
+pset.renameArguments(ARG0="x")
 
 creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
 creator.create("Individual", gp.PrimitiveTree, fitness=creator.FitnessMin)
@@ -106,10 +101,7 @@ def draw_solution(individual):
 def main():
     random.seed(167)
 
-    population_size = 1000
-    crossover_rate = 0.7
-    mutation_rate = 0
-    number_of_generations = 50
+    population_size, crossover_rate, mutation_rate, number_of_generations = 1000, 0.7, 0, 50
 
     # Initial population
     pop = toolbox.population(n=population_size)
