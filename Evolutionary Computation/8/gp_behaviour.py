@@ -98,25 +98,40 @@ def draw_solution(individual):
     g.draw("best_solution.pdf")
 
 
+def additional_statistics():
+    stats_fit = tools.Statistics(lambda ind: ind.fitness.values)
+    stats_size = tools.Statistics(len)
+    mstats = tools.MultiStatistics(fitness=stats_fit, size=stats_size)
+    mstats.register("avg", np.mean)
+    mstats.register("std", np.std)
+    mstats.register("min", np.min)
+    mstats.register("max", np.max)
+    return mstats
+
+
 def main():
     random.seed(167)
 
     population_size, crossover_rate, mutation_rate, number_of_generations = 1000, 0.7, 0, 50
+    stats = additional_statistics()
+    logbook = tools.Logbook()
+    logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
+    verbose = True
 
     # Initial population
-    pop = toolbox.population(n=population_size)
+    population = toolbox.population(n=population_size)
     # Evaluate the initial population
-    fitnesses = map(toolbox.evaluate, pop)
-    for ind, fit in zip(pop, fitnesses):
+    fitnesses = map(toolbox.evaluate, population)
+    for ind, fit in zip(population, fitnesses):
         ind.fitness.values = fit
 
     # best individuals of each generation are saved for statistics
     best_individuals = []
-    for _ in range(number_of_generations):
+    for generation in range(1, number_of_generations+1):
         # Tournament selection of the next generation individuals
-        offspring = toolbox.select(pop, len(pop))
+        offspring = toolbox.select(population, len(population))
 
-        # Apply crossover or mutation to offspring
+        # Apply crossover or mutation to offsprings
         offspring = algorithms.varOr(offspring, toolbox, population_size, crossover_rate, mutation_rate)
 
         # Evaluate the individuals with an invalid fitness
@@ -131,7 +146,13 @@ def main():
 
         best_individuals.append(best_ind)
         # Generational scheme: the population is entirely replaced by the offspring
-        pop[:] = offspring
+        population[:] = offspring
+
+        # Append the current generation statistics to the logbook
+        record = stats.compile(population) if stats else {}
+        logbook.record(gen=generation, nevals=len(invalid_ind), **record)
+        if verbose:
+            print(logbook.stream)
 
     plot_statistics(best_individuals)
 
