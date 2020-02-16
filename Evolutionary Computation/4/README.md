@@ -1,0 +1,1 @@
+Running the code for exercise 4 produces first ten runs of the original algorithm and then 10 runs of the adjusted algorithm. After every run, a plot is produced of the fittness over the amount of iterations.
