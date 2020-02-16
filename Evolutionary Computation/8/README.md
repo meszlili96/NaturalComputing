@@ -1,4 +1,4 @@
-#How to reproduce the GP results:
+# How to reproduce the GP results:
 
 1. To install the dependencies, please run ```pip install -r requirements.txt```
 2. Run the program with ```python3.7 gp_behaviour.py```.  The results should be exaclty the same as in the report, because the same random seed is kept.
