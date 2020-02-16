@@ -30,8 +30,7 @@ def protected_log(arg):
 def fitness_function(individual, points):
     # Transform the tree expression in a callable function
     func = toolbox.compile(expr=individual)
-    # Evaluate the absolute errors between the expression
-    # and the real function
+    # Evaluate the absolute errors between the expression and the real function
     abs_errors = [abs(func(x) - y) for x, y in points]
     sum_of_errors = math.fsum(abs_errors)
     return sum_of_errors,
@@ -101,7 +100,7 @@ def draw_solution(individual):
         n = g.get_node(i)
         n.attr["label"] = labels[i]
 
-    g.draw("tree.pdf")
+    g.draw("best_solution.pdf")
 
 
 def main():
@@ -112,26 +111,26 @@ def main():
     mutation_rate = 0
     number_of_generations = 50
 
+    # Initial population
     pop = toolbox.population(n=population_size)
-
-    # Evaluate the entire population
+    # Evaluate the initial population
     fitnesses = map(toolbox.evaluate, pop)
     for ind, fit in zip(pop, fitnesses):
         ind.fitness.values = fit
 
+    # best individuals of each generation are saved for statistics
     best_individuals = []
-    for g in range(number_of_generations):
-        # Select the next generation individuals
+    for _ in range(number_of_generations):
+        # Tournament selection of the next generation individuals
         offspring = toolbox.select(pop, len(pop))
-        # Clone the selected individuals
-        offspring = map(toolbox.clone, offspring)
 
-        # Apply crossover and mutation on the offspring
-        offspring = algorithms.varAnd(offspring, toolbox, crossover_rate, mutation_rate)
+        # Apply crossover or mutation to offspring
+        offspring = algorithms.varOr(offspring, toolbox, population_size, crossover_rate, mutation_rate)
 
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
         fitnesses = map(toolbox.evaluate, invalid_ind)
+        # Find the best individual
         (best_fitness, best_ind) = (math.inf, None)
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
@@ -139,7 +138,7 @@ def main():
                 (best_fitness, best_ind) = (fit[0], ind)
 
         best_individuals.append(best_ind)
-        # The population is entirely replaced by the offspring
+        # Generational scheme: the population is entirely replaced by the offspring
         pop[:] = offspring
 
     plot_statistics(best_individuals)
