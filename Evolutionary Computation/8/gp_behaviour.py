@@ -51,34 +51,36 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 toolbox.register("compile", gp.compile, pset=pset)
 
 toolbox.register("evaluate", fitness_function, points=data_points)
-toolbox.register("select", tools.selTournament, tournsize=3)
+toolbox.register("select", tools.selTournament, tournsize=7)
 toolbox.register("mate", gp.cxOnePoint)
 toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
 toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
 
+# TODO: comment if you want to try out the GP algorithm without bloat control
+toolbox.decorate("mate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
+toolbox.decorate("mutate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
 
-def plot_statistics(best_individuals):
-    number_of_generations = len(best_individuals)
-    best_fitnesses = [ind.fitness.values for ind in best_individuals]
-    best_sizes = [len(ind) for ind in best_individuals]
+def plot_statistics(best_fitnesses, best_sizes):
+    number_of_generations = len(best_fitnesses)
 
     # plot the results
     fig, ax1 = plt.subplots()
-    line1 = ax1.plot(range(1, number_of_generations + 1), best_fitnesses, "b-", label="Best Fitness")
+    line1 = ax1.plot(range(1, number_of_generations + 1), best_fitnesses, "b-", label="Fitness")
     ax1.set_xlabel("Generation")
     ax1.set_ylabel("Fitness", color="b")
     for tl in ax1.get_yticklabels():
         tl.set_color("b")
 
     ax2 = ax1.twinx()
-    line2 = ax2.plot(range(1, number_of_generations + 1), best_sizes, "r-", label="Best Size")
+    line2 = ax2.plot(range(1, number_of_generations + 1), best_sizes, "r-", label="Size")
     ax2.set_ylabel("Size", color="r")
     for tl in ax2.get_yticklabels():
         tl.set_color("r")
 
     lns = line1 + line2
     labs = [l.get_label() for l in lns]
-    ax1.legend(lns, labs, loc="center right")
+    ax1.legend(lns, labs, bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',
+           ncol=2, mode="expand", borderaxespad=0.)
 
     plt.show()
 
@@ -154,9 +156,18 @@ def main():
         if verbose:
             print(logbook.stream)
 
-    plot_statistics(best_individuals)
+    # Plot statistics of the best solution
+    best_fitnesses = [ind.fitness.values for ind in best_individuals]
+    best_sizes = [len(ind) for ind in best_individuals]
+    plot_statistics(best_fitnesses, best_sizes)
+
+    # Plot average statistics
+    fit_avgs = logbook.chapters["fitness"].select("avg")
+    size_avgs = logbook.chapters["size"].select("avg")
+    plot_statistics(fit_avgs, size_avgs)
 
     final_solution = best_individuals[-1]
+    print("Final solution size {}, height {}, fitness {}".format(len(final_solution), final_solution.height, final_solution.fitness.values[0]))
     draw_solution(final_solution)
 
     return final_solution
