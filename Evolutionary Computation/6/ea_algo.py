@@ -169,6 +169,8 @@ def main():
     else:
         if (sys.argv[1] == "drill"):
             coords = read_file("a280.txt")
+        elif (sys.argv[1] == "us"):
+            coords = read_file("us48.txt")
         elif (sys.argv[1] == "burma"):
             coords = read_file("burma14.txt")
         else:
