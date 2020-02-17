@@ -51,34 +51,36 @@ toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 toolbox.register("compile", gp.compile, pset=pset)
 
 toolbox.register("evaluate", fitness_function, points=data_points)
-toolbox.register("select", tools.selTournament, tournsize=3)
+toolbox.register("select", tools.selTournament, tournsize=7)
 toolbox.register("mate", gp.cxOnePoint)
 toolbox.register("expr_mut", gp.genFull, min_=0, max_=2)
 toolbox.register("mutate", gp.mutUniform, expr=toolbox.expr_mut, pset=pset)
 
+# TODO: comment if you want to try out the GP algorithm without bloat control
+toolbox.decorate("mate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
+toolbox.decorate("mutate", gp.staticLimit(key=operator.attrgetter("height"), max_value=17))
 
-def plot_statistics(best_individuals):
-    number_of_generations = len(best_individuals)
-    best_fitnesses = [ind.fitness.values for ind in best_individuals]
-    best_sizes = [len(ind) for ind in best_individuals]
+def plot_statistics(best_fitnesses, best_sizes):
+    number_of_generations = len(best_fitnesses)
 
     # plot the results
     fig, ax1 = plt.subplots()
-    line1 = ax1.plot(range(1, number_of_generations + 1), best_fitnesses, "b-", label="Best Fitness")
+    line1 = ax1.plot(range(1, number_of_generations + 1), best_fitnesses, "b-", label="Fitness")
     ax1.set_xlabel("Generation")
     ax1.set_ylabel("Fitness", color="b")
     for tl in ax1.get_yticklabels():
         tl.set_color("b")
 
     ax2 = ax1.twinx()
-    line2 = ax2.plot(range(1, number_of_generations + 1), best_sizes, "r-", label="Best Size")
+    line2 = ax2.plot(range(1, number_of_generations + 1), best_sizes, "r-", label="Size")
     ax2.set_ylabel("Size", color="r")
     for tl in ax2.get_yticklabels():
         tl.set_color("r")
 
     lns = line1 + line2
     labs = [l.get_label() for l in lns]
-    ax1.legend(lns, labs, loc="center right")
+    ax1.legend(lns, labs, bbox_to_anchor=(0., 1.02, 1., .102), loc='lower left',
+           ncol=2, mode="expand", borderaxespad=0.)
 
     plt.show()
 
@@ -98,25 +100,40 @@ def draw_solution(individual):
     g.draw("best_solution.pdf")
 
 
+def additional_statistics():
+    stats_fit = tools.Statistics(lambda ind: ind.fitness.values)
+    stats_size = tools.Statistics(len)
+    mstats = tools.MultiStatistics(fitness=stats_fit, size=stats_size)
+    mstats.register("avg", np.mean)
+    mstats.register("std", np.std)
+    mstats.register("min", np.min)
+    mstats.register("max", np.max)
+    return mstats
+
+
 def main():
     random.seed(167)
 
     population_size, crossover_rate, mutation_rate, number_of_generations = 1000, 0.7, 0, 50
+    stats = additional_statistics()
+    logbook = tools.Logbook()
+    logbook.header = ['gen', 'nevals'] + (stats.fields if stats else [])
+    verbose = True
 
     # Initial population
-    pop = toolbox.population(n=population_size)
+    population = toolbox.population(n=population_size)
     # Evaluate the initial population
-    fitnesses = map(toolbox.evaluate, pop)
-    for ind, fit in zip(pop, fitnesses):
+    fitnesses = map(toolbox.evaluate, population)
+    for ind, fit in zip(population, fitnesses):
         ind.fitness.values = fit
 
     # best individuals of each generation are saved for statistics
     best_individuals = []
-    for _ in range(number_of_generations):
+    for generation in range(1, number_of_generations+1):
         # Tournament selection of the next generation individuals
-        offspring = toolbox.select(pop, len(pop))
+        offspring = toolbox.select(population, len(population))
 
-        # Apply crossover or mutation to offspring
+        # Apply crossover or mutation to offsprings
         offspring = algorithms.varOr(offspring, toolbox, population_size, crossover_rate, mutation_rate)
 
         # Evaluate the individuals with an invalid fitness
@@ -131,11 +148,26 @@ def main():
 
         best_individuals.append(best_ind)
         # Generational scheme: the population is entirely replaced by the offspring
-        pop[:] = offspring
+        population[:] = offspring
 
-    plot_statistics(best_individuals)
+        # Append the current generation statistics to the logbook
+        record = stats.compile(population) if stats else {}
+        logbook.record(gen=generation, nevals=len(invalid_ind), **record)
+        if verbose:
+            print(logbook.stream)
+
+    # Plot statistics of the best solution
+    best_fitnesses = [ind.fitness.values for ind in best_individuals]
+    best_sizes = [len(ind) for ind in best_individuals]
+    plot_statistics(best_fitnesses, best_sizes)
+
+    # Plot average statistics
+    fit_avgs = logbook.chapters["fitness"].select("avg")
+    size_avgs = logbook.chapters["size"].select("avg")
+    plot_statistics(fit_avgs, size_avgs)
 
     final_solution = best_individuals[-1]
+    print("Final solution size {}, height {}, fitness {}".format(len(final_solution), final_solution.height, final_solution.fitness.values[0]))
     draw_solution(final_solution)
 
     return final_solution
