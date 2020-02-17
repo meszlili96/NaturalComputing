@@ -2,6 +2,7 @@ import math
 import random
 import copy
 import sys
+import matplotlib.pyplot as plt
 
 class Coord:
     def __init__(self,x,y):
@@ -110,8 +111,7 @@ def opt_2_all(samples):
 
 def genetic_algorithm(orig_coords, generations, memetic=False):
     population=init_population(orig_coords,10)
-    best = tuple()
-    best_index = 0
+    best = []
 
     for i in range(generations):
         fit=fitness(population)
@@ -121,17 +121,33 @@ def genetic_algorithm(orig_coords, generations, memetic=False):
         population=mutate(crossover_children+children,0.001)
         if memetic:
             population=opt_2_all(population)
-        best = selection(fitness(population),1)[0]
-        best_index = best[0]
-        print_results(population[best_index],orig_coords)
+        best_tuple = selection(fitness(population),1)[0]
+        best_index = best_tuple[0]
+        #print_results(population[best_index],orig_coords)
+        best.append(calc_fitness(population[best_index]))
 
-    return population[best_index]
+    return best
 
 def print_results(best_route_coords,orig_coords):
     best_route=[]
     for i in range(len(best_route_coords)):
         best_route.append(orig_coords.index(best_route_coords[i]))
     print("Order of locations: " + str(best_route) + ", value: " + str(calc_fitness(best_route_coords)))
+
+def plot_statistics(best, best_mem):
+    x = [i for i in range(len(best))]
+    y = best
+    plt.plot(x, y, label = "Simple")
+
+    y_mem = best_mem
+    plt.plot(x, y_mem, label = "Mematic")
+
+    plt.xlabel('generations') 
+    plt.ylabel('distance') 
+    plt.title('Comparison of simple EA and Memetic Algorithm')
+    plt.legend()
+
+    plt.show()
 
 def read_file(txt):
     coords = []
@@ -158,6 +174,8 @@ def main():
         else:
             print("Error, wrong arguments given!")
             return
-        best_route_coords=genetic_algorithm(coords,1000)
+        best_route=genetic_algorithm(coords,100)
+        best_route_mem=genetic_algorithm(coords,100,True)
+        plot_statistics(best_route,best_route_mem)
 
 main()
