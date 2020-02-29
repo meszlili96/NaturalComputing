@@ -1,0 +1,5 @@
+K-means average quantization error 0.6103396801281439, std 0.012129030339662892, artificial data
+PSO average quantization error 0.5786068304601628, std 0.013922076608650956, artificial data
+
+K-means average quantization error 0.6577993368544235, std 0.023241600900607756, iris data
+PSO average quantization error 0.601236445036839, std 0.030128408242823812, iris data
