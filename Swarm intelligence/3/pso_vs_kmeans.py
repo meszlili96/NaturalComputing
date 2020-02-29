@@ -4,10 +4,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn import datasets
 
-# PSO constants
-w = 0.72
-c1 = c2 = 1.49
-
 # Returns tuple (data, labels)
 def load_iris_dataset():
     iris = datasets.load_iris()
@@ -35,6 +31,16 @@ def generate_artificial_data(n_points):
     return data_points, class_labels
 
 
+def generate_artificial_data2():
+    mus = [[-3, 0], [0, 0], [3, 0], [6, 0]]
+    sigma = [[0.5, 0.05], [0.05, 0.5]]  # mean and standard deviation
+    data = []
+    for mu in mus:
+        data += np.random.multivariate_normal(mu, sigma, 150).tolist()
+
+    return np.array(data)
+
+
 def plot_artificial_data(data, labels):
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
@@ -53,7 +59,8 @@ def plot_artificial_clusters(clusters):
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
     for cluster in clusters:
-        ax.scatter(cluster[:, 0], cluster[:, 1], alpha=0.8, edgecolors='none', s=20, label='0')
+        if len(cluster) > 0:
+            ax.scatter(cluster[:, 0], cluster[:, 1], alpha=0.8, edgecolors='none', s=20, label='0')
 
     plt.title('Artificial data clusters')
     plt.legend(loc=2)
@@ -63,15 +70,18 @@ def plot_artificial_clusters(clusters):
 
 
 def euclidean_distance(x, y):
-    return math.sqrt(sum([(xi - yi)**2 for xi, yi in zip(x, y)]))
+    return np.sqrt(np.sum((x - y)**2))
 
 
 def quantization_error(centroids, clusters):
     n_clusters = len(clusters)
     assert n_clusters == len(centroids), "The number of centroids should match the number of clusters"
-    error = 0
+    error = 0.0
     for centroid, cluster in zip(centroids, clusters):
-        error += sum([euclidean_distance(item, centroid) for item in cluster])/len(cluster) if len(cluster) > 0 else 0
+        # For some reason PSO tends to create less clusters than requested
+        # to prevent this behaviour we penalize empty clusters by returning infinity error for them
+        distances_sum = np.sum([euclidean_distance(item, centroid) for item in cluster])
+        error += distances_sum/len(cluster) if len(cluster) > 0 else np.inf
 
     error /= n_clusters
     return error
@@ -100,76 +110,91 @@ def cluster_data(data, centroids):
 
 class Particle:
 
-    def __init__(self, position):
+    def __init__(self, position, data, w=0.72, c1=1.49, c2=1.49):
         self.position = position
-        self.best_position = position
-        self.best_fitness = math.inf
+        self.fitness = quantization_error(position, cluster_data(data, position))
+        self.best_position = position.copy()
+        self.best_fitness = self.fitness
         # In the paper it is not said how velocities are initialized. We follow lecture slides and initialize them with zeros
         self.velocity = np.zeros(position.shape)
         self.length = self.position.shape[0]
         self.data_dimension = self.position.shape[1]
+        self.w = w
+        self.c1 = c1
+        self.c2 = c2
 
+    def update(self, global_best):
+        self.update_velocity(global_best)
+        self.update_position()
 
     def update_velocity(self, global_best):
-        # TODO: rewrite to vectors
         for i in range(self.length):
-            for k in range(self.data_dimension):
-                # in the parer r1 and r2 are drawn for each data dimenstion
-                r1, r2 = random.random(), random.random()
-                self.velocity[i, k] = w * self.velocity[i, k] + c1 * r1 * (self.best_position[i, k] - self.position[i, k]) \
-                                      + c2 * r2 * (global_best[i, k] - self.position[i, k])
-
+            r1, r2 = np.random.rand(2), np.random.rand(2)
+            inertia = self.w * self.velocity[i]
+            personal_influence = self.c1 * r1 * (self.best_position[i] - self.position[i])
+            global_influence = self.c2 * r2 * (global_best[i] - self.position[i])
+            self.velocity[i] = inertia + personal_influence + global_influence
 
     def update_position(self):
         self.position = self.position + self.velocity
 
+    def evaluate(self, data):
+        self.fitness = quantization_error(self.position, cluster_data(data, self.position))
 
-# return tuple of (clusters, centroids)
-def pso_clustering(data, n_clusters, n_particles=10, max_iter=1000, verbose=False):
-    # randomly initialize particles
-    particles = []
-    for i in range(n_particles):
-        # initialize particles with data randomly sampled data points
-        random_sample = random.sample(data, n_clusters)
-        particle = Particle(np.array(random_sample))
-        particles.append(particle)
+        # update local best
+        if self.fitness < self.best_fitness:
+            self.best_fitness = self.fitness
+            self.best_position = self.position.copy()
 
-    global_best = None
-    global_best_fitness = math.inf
+class PSO_Clustering:
 
-    # pso clustering algorithm
-    for iteration in range(max_iter):
-        if verbose:
-            print("PSO iteration {}".format(iteration))
+    def __init__(self, data, n_clusters, n_particles=10, max_iter=1000, verbose=True):
+        self.data = data
+        self.n_clusters = n_clusters
+        self.n_particles = n_particles
+        self.max_iter = max_iter
+        self.verbose = verbose
+        self.global_best = None
+        self.global_best_fitness = np.inf
+        self.particles = []
+        self.init_particles()
 
-        for particle in particles:
-            centroids = particle.position
-            clusters = cluster_data(data, centroids)
-            fitness = quantization_error(centroids, clusters)
-
-            # update local best
-            if fitness < particle.best_fitness:
-                particle.best_fitness = fitness
-                particle.best_position = np.array(centroids)
+    def init_particles(self):
+        for i in range(self.n_particles):
+            # initialize particles with data randomly sampled data points
+            index = np.random.choice(list(range(len(self.data))), self.n_clusters)
+            particle = Particle(self.data[index].copy(), self.data)
+            self.particles.append(particle)
 
             # update global best
-            if fitness < global_best_fitness:
-                global_best_fitness = fitness
-                global_best = np.array(centroids)
+            if particle.best_fitness < self.global_best_fitness:
+                self.global_best_fitness = particle.best_fitness
+                self.global_best = particle.best_position.copy()
 
-            particle.update_velocity(global_best)
-            particle.update_position()
+    def fit(self):
+        for iteration in range(self.max_iter):
+            if self.verbose:
+                print("PSO iteration {}".format(iteration))
 
-    centroids = global_best
-    clusters = cluster_data(data, centroids)
+            for particle in self.particles:
+                particle.update(self.global_best)
+                particle.evaluate(self.data)
 
-    return clusters, centroids.tolist()
+            for particle in self.particles:
+                # update global best
+                if particle.best_fitness < self.global_best_fitness:
+                    self.global_best_fitness = particle.best_fitness
+                    self.global_best = particle.best_position.copy()
+
+        centroids = self.global_best
+        clusters = cluster_data(self.data, centroids)
+        return clusters, centroids
 
 
 def k_means(data, n_clusters, max_iter=1000, verbose=False):
-    centroids = random.sample(data, n_clusters)
+    index = np.random.choice(list(range(len(data))), n_clusters)
+    centroids = data[index].copy()
 
-    # pso clustering algorithm
     for iteration in range(max_iter):
         if verbose:
             print("K means iteration {}".format(iteration))
@@ -189,11 +214,12 @@ def k_means(data, n_clusters, max_iter=1000, verbose=False):
 def compare_on_iris():
     iris_data, _ = load_iris_dataset()
 
-    k_means_clusters, k_means_centroids = k_means(iris_data, 2)
+    k_means_clusters, k_means_centroids = k_means(iris_data, 3)
     k_means_qe = quantization_error(k_means_centroids, k_means_clusters)
     print("K means fitness, iris data {}".format(k_means_qe))
 
-    pso_clusters, pso_centroids = pso_clustering(iris_data, 2)
+    PSO = PSO_Clustering(iris_data, 3, max_iter=500)
+    pso_clusters, pso_centroids = PSO.fit()
     pso_qe = quantization_error(pso_centroids, pso_clusters)
     print("PSO fitness, iris data  {}".format(pso_qe))
 
@@ -208,20 +234,32 @@ def compare_on_artificial_data():
     print("K means fitness, artificial data {}".format(k_means_qe))
     #plot_artificial_clusters(k_means_clusters)
 
-    pso_clusters, pso_centroids = pso_clustering(artificial_data, 2)
+    PSO = PSO_Clustering(artificial_data, 2, max_iter=500)
+    pso_clusters, pso_centroids = PSO.fit()
+    pso_qe = quantization_error(pso_centroids, pso_clusters)
+    print("PSO fitness, artificial data  {}".format(pso_qe))
+   # plot_artificial_clusters(pso_clusters)
+
+
+def compare_on_artificial_data2():
+    artificial_data = generate_artificial_data2()
+    # Plot artificial data
+    #plot_artificial_data(artificial_data, artificial_labels)
+
+    k_means_clusters, k_means_centroids = k_means(artificial_data, 4)
+    k_means_qe = quantization_error(k_means_centroids, k_means_clusters)
+    print("K means fitness, artificial data {}".format(k_means_qe))
+    #plot_artificial_clusters(k_means_clusters)
+
+    PSO = PSO_Clustering(artificial_data, 4, max_iter=250)
+    pso_clusters, pso_centroids = PSO.fit()
     pso_qe = quantization_error(pso_centroids, pso_clusters)
     print("PSO fitness, artificial data  {}".format(pso_qe))
     plot_artificial_clusters(pso_clusters)
 
 
 def main():
-    random.seed(178)
-
-    compare_on_artificial_data()
-    #compare_on_iris()
-
-
-
+    compare_on_artificial_data2()
 
 
 if __name__ == "__main__":
