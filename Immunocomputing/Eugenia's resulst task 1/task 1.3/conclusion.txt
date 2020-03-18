@@ -1,0 +1,7 @@
+The best discrimination of all the languages is with r = 3
+hiligaynon - AUC = 0.839741935483871
+middle-english - AUC = 0.5424193548387097
+plautdietsch - AUC = 0.7746774193548387
+xhosa AUC = 0.8893387096774196
+
+The results are sensible - it is hardly possible to discriminate English and middle-english, plautdietsch is from the same language family, hiligaynon could have some influence from European languages because of colonisation history (or other reasons, haven't had much time to check). xhosa is the most different and it is from South Africa
