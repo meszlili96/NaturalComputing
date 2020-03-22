@@ -12,61 +12,55 @@ def create_dir(path):
         print("Creation of the directory %s failed" % path)
 
 
-def compute_scores_from_file(n, r, training_file_path, test_file_path, is_self):
-    command = 'java -jar negsel2.jar -self {} -n {} -r {} -c -l < {}'.format(training_file_path, n, r, test_file_path)
+def detect_non_english(r,
+                       self_file_path,
+                       non_self_file_path,
+                       output_folder,
+                       n=10,
+                       training_file_path='english.train'):
     # process non-self (positive)
-    stream = os.popen(command)
-    output = stream.read()
-    scores = [(float(line), 0 if is_self else 1) for line in output.splitlines()]
-    return scores
-
-
-def detect_non_self_task1(r,
-                          self_file_path,
-                          non_self_file_path,
-                          output_folder,
-                          n=10,
-                          training_file_path='english.train'):
-    # process non-self (positive)
-    non_self = compute_scores_from_file(n, r, training_file_path, non_self_file_path, False)
-    positive_num = len(non_self)
+    non_self_scores = compute_scores(n, r, training_file_path, non_self_file_path, alphabet=training_file_path)
+    non_self_data = [(score, 1) for score in non_self_scores]
+    positive_num = len(non_self_scores)
 
     # process self (negative)
-    self = compute_scores_from_file(n, r, training_file_path, self_file_path, True)
-    negative_num = len(self)
+    self_scores = compute_scores(n, r, training_file_path, self_file_path, alphabet=training_file_path)
+    self_data = [(score, 0) for score in self_scores]
+    negative_num = len(self_scores)
 
-    result = non_self + self
-    auc = perform_roc_analysis(result, positive_num, negative_num, output_folder, r)
+    data = non_self_data + self_data
+    auc = perform_roc_analysis(data, positive_num, negative_num, output_folder, r)
     return auc
 
 
 # test_data - a tuple (sequence, class)
-def compute_scores(n, r, training_file_path, test_file_path, labels, alphabet='task 2/snd-cert/snd-cert.alpha'):
+def compute_scores(n, r, training_file_path, test_file_path, alphabet='task 2/snd-cert/snd-cert.alpha'):
     command = 'java -jar negsel2.jar -alphabet file://\'{}\' -self \'{}\' -n {} -r {} -c -l < {}'.format(alphabet, training_file_path, n, r, test_file_path)
 
     stream = os.popen(command)
     output = stream.read()
     lines = output.splitlines()
 
-    computed_scores = []
-    for index, line in enumerate(lines):
-        scores = np.array([float(score) for score in line.rstrip().split()])
-        computed_scores.append((scores.mean(), labels[index]))
+    scores = []
+    for line in lines:
+        line_scores = np.array([float(score) for score in line.rstrip().split()])
+        scores.append(line_scores.mean())
 
-    return computed_scores
+    return scores
 
 
-def detect_non_sel_task2(r,
-                         labels,
-                         output_folder,
-                         n=7,
-                         test_file_path='syscalls/snd-cert/snd-cert.1.test',
-                         training_file_path='task 2/snd-cert/snd-cert.train'):
+def detect_syscall_intrusion(r,
+                             labels,
+                             output_folder,
+                             n=7,
+                             test_file_path='syscalls/snd-cert/snd-cert.1.test',
+                             training_file_path='task 2/snd-cert/snd-cert.train'):
     positive_num = len([x for x in labels if x == 1])
     negative_num = len([x for x in labels if x == 0])
 
-    scores = compute_scores(n, r, training_file_path, test_file_path, labels)
-    auc = perform_roc_analysis(scores, positive_num, negative_num, output_folder, r)
+    scores = compute_scores(n, r, training_file_path, test_file_path)
+    data = tuple(zip(scores, labels))
+    auc = perform_roc_analysis(data, positive_num, negative_num, output_folder, r)
     return auc
 
 
@@ -109,13 +103,12 @@ def perform_roc_analysis(data, positive_num, negative_num, output_folder, r, plo
     return auc
 
 
-def analyze_auc_by_substring(self_file, non_self_file, output_folder, substring_range=range(1, 10)):
-    # Task 1.2
+def analyze_auc_by_r_value(self_file, non_self_file, output_folder, r_range=range(1, 10)):
     create_dir(output_folder)
     r_performance = []
     results = ''
-    for r in substring_range:
-        auc = detect_non_self_task1(r, self_file, non_self_file, output_folder)
+    for r in r_range:
+        auc = detect_non_english(r, self_file, non_self_file, output_folder)
         print('For r = {} AUC = {} \n'.format(r, auc))
         results += 'For r = {} AUC = {} \n'.format(r, auc)
         r_performance.append((r, auc))
@@ -134,16 +127,14 @@ def task1():
     # Task 1.2
     not_english_test_file = 'tagalog.test'
     output_folder = 'task 1.2'
-    analyze_auc_by_substring(english_test_file, not_english_test_file, output_folder)
+    analyze_auc_by_r_value(english_test_file, not_english_test_file, output_folder)
 
     # Task 1.3
     create_dir('task 1.3')
     output_folders = ['task 1.3/hiligaynon', 'task 1.3/middle-english', 'task 1.3/plautdietsch', 'task 1.3/xhosa']
     languages_files = ['lang/hiligaynon.txt', 'lang/middle-english.txt', 'lang/plautdietsch.txt', 'lang/xhosa.txt']
     for output_folder, languages_file in zip(output_folders, languages_files):
-        analyze_auc_by_substring(english_test_file, languages_file, output_folder)
-
-    print('done')
+        analyze_auc_by_r_value(english_test_file, languages_file, output_folder)
 
 
 
@@ -221,9 +212,11 @@ def main():
     #write_strings_to_file(training_sequences, 'task 2/snd-cert/snd-cert.train')
 
     #test_data = get_labeled_test_data('snd-cert', 1)
-    labels = get_labes('snd-cert', 1)
-    auc = detect_non_sel_task2(3, labels, 'task 2/snd-cert/1')
-    print(auc)
+    #labels = get_labes('snd-cert', 1)
+    #auc = detect_syscall_intrusion(3, labels, 'task 2/snd-cert/1')
+    #print(auc)
+
+    task1()
 
     print('done')
 
