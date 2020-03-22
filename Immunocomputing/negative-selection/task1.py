@@ -41,29 +41,31 @@ def detect_non_self_task1(r,
 
 
 # test_data - a tuple (sequence, class)
-def compute_scores_from_data(n, r, training_file_path, test_data, alphabet='task 2/snd-cert/snd-cert.alpha'):
-    command = 'java -jar negsel2.jar -alphabet file://\'{}\' -self \'{}\' -n {} -r {} -c -l'.format(alphabet, training_file_path, n, r)
+def compute_scores(n, r, training_file_path, test_file_path, labels, alphabet='task 2/snd-cert/snd-cert.alpha'):
+    command = 'java -jar negsel2.jar -alphabet file://\'{}\' -self \'{}\' -n {} -r {} -c -l < {}'.format(alphabet, training_file_path, n, r, test_file_path)
+
+    stream = os.popen(command)
+    output = stream.read()
+    lines = output.splitlines()
 
     computed_scores = []
-    for sequence, s_class in test_data:
-        process = subprocess.Popen([command], shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, close_fds=True)
-        output, error = process.communicate(sequence.encode('utf-8'))
-        scores = np.array([float(score) for score in output.rstrip().split()])
-        computed_scores.append((scores.mean(), s_class))
-        process.terminate()
+    for index, line in enumerate(lines):
+        scores = np.array([float(score) for score in line.rstrip().split()])
+        computed_scores.append((scores.mean(), labels[index]))
 
     return computed_scores
 
 
 def detect_non_sel_task2(r,
-                         test_data,
+                         labels,
                          output_folder,
                          n=7,
+                         test_file_path='syscalls/snd-cert/snd-cert.1.test',
                          training_file_path='task 2/snd-cert/snd-cert.train'):
-    positive_num = len([x for x in test_data if x[1] == 1])
-    negative_num = len([x for x in test_data if x[1] == 0])
+    positive_num = len([x for x in labels if x == 1])
+    negative_num = len([x for x in labels if x == 0])
 
-    scores = compute_scores_from_data(n, r, training_file_path, test_data)
+    scores = compute_scores(n, r, training_file_path, test_file_path, labels)
     auc = perform_roc_analysis(scores, positive_num, negative_num, output_folder, r)
     return auc
 
@@ -197,6 +199,16 @@ def get_labeled_test_data(folder, file_index):
     return tuple(zip(sequences, labels))
 
 
+def get_labes(folder, file_index):
+    labels = []
+    labels_file = os.path.join('syscalls', folder, folder + '.' + str(file_index) + '.labels')
+    with open(labels_file) as file:
+        for label in file:
+            labels.append(int(label.rstrip()))
+
+    return labels
+
+
 #def analyze_sequence():
 
 
@@ -208,8 +220,9 @@ def main():
     #training_sequences = process_training_set('syscalls/snd-cert/snd-cert.train')
     #write_strings_to_file(training_sequences, 'task 2/snd-cert/snd-cert.train')
 
-    test_data = get_labeled_test_data('snd-cert', 1)
-    auc = detect_non_sel_task2(3, test_data, 'task 2/snd-cert/1')
+    #test_data = get_labeled_test_data('snd-cert', 1)
+    labels = get_labes('snd-cert', 1)
+    auc = detect_non_sel_task2(3, labels, 'task 2/snd-cert/1')
     print(auc)
 
     print('done')
