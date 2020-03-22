@@ -2,7 +2,8 @@ import os
 import matplotlib.pyplot as plt
 from sklearn import metrics
 import numpy as np
-
+from collections import Counter
+import subprocess
 
 def create_dir(path):
     try:
@@ -25,6 +26,24 @@ def compute_scores(n, r, training_file_path, test_file_path, alphabet):
         scores.append(line_scores.mean())
 
     return scores
+
+
+def compute_scores1(n, r, training_file_path, counters, alphabet):
+    command = 'java -jar negsel2.jar -alphabet file://\'{}\' -self \'{}\' -n {} -r {} -c -l'.format(alphabet, training_file_path, n, r)
+
+    computed_scores = []
+    for counter in counters:
+        scores = []
+        for unique_sequence in counter.keys():
+            process = subprocess.Popen([command], shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, close_fds=True)
+            output, error = process.communicate(unique_sequence.encode('utf-8'))
+            score = float(output.rstrip()) * counter[unique_sequence]
+            scores.append(score)
+
+            process.terminate()
+        computed_scores.append(scores.mean())
+
+    return computed_scores
 
 
 # returns AUC score
@@ -50,7 +69,7 @@ def perform_roc_analysis(data, positive_num, negative_num, output_folder, r, plo
     auc = metrics.auc(r_specificities, sensitivities)
 
     plt.figure()
-    plt.plot(r_specificities, sensitivities, color='darkorange', lw=2, label='AUC = %0.2f' % auc)
+    plt.plot(r_specificities, sensitivities, color='darkorange', lw=2, label='AUC = %0.3f' % auc)
     plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
@@ -129,6 +148,15 @@ def fixed_length_substrings(string, chunk_length):
     return substrings
 
 
+def unique_substrings(string, chunk_length):
+    counter = Counter()
+    for i in range(len(string)-chunk_length+1):
+        substring = string[i:i + chunk_length]
+        counter[substring] += 1
+
+    return counter
+
+
 def process_training_set(file_path):
     samples = []
     with open(file_path) as file:
@@ -162,6 +190,15 @@ def get_labes(labels_file_path):
     return labels
 
 
+def get_unique_substrings(test_file_path):
+    counters = []
+    with open(test_file_path) as file:
+        for sequence in file:
+            counters.append(unique_substrings(sequence.rstrip()))
+
+    return counters
+
+
 def detect_syscall_intrusion(n,
                              r,
                              test_file_path,
@@ -188,7 +225,7 @@ def auc_analysis_syscalls(test_file_path, labels, training_file_path, alpha_file
         line = file.readline().rstrip()
         n = len(line)
 
-    r_range = range(1, n+1)
+    r_range = range(1, 5)
     for r in r_range:
         auc = detect_syscall_intrusion(n, r, test_file_path, labels, training_file_path, alpha_file_path, output_folder)
         print('For r = {} AUC = {} \n'.format(r, auc))
@@ -207,8 +244,8 @@ def main():
 
     syscalls_folder = 'syscalls'
     results_folder = 'task 2'
-    subfolders = ['snd-cert', 'snd-unm']
-    test_files_indexes = ['1', '2', '3']
+    subfolders = ['snd-cert']# ['snd-cert', 'snd-unm']
+    test_files_indexes = ['1'] # ['1', '2', '3']
 
     train_files_suffix = '.train'
     train_preprocessed_files_suffix = '.train_preprocessed'
