@@ -1,2 +1,8 @@
-For r = 4 AUC = 0.8273199999999999 
-r = 4 discriminates self and non-self best, AUC = 0.8273199999999999
+For r = 1 AUC = 0.45187999999999995 
+For r = 2 AUC = 0.6290800000000001 
+For r = 3 AUC = 0.75204 
+For r = 4 AUC = 0.8279599999999999 
+For r = 5 AUC = 0.8281999999999999 
+For r = 6 AUC = 0.8348 
+For r = 7 AUC = 0.8344399999999998 
+r = 6 discriminates self and non-self best, AUC = 0.8348

@@ -174,12 +174,13 @@ def task1():
         auc_analysis_languages(english_test_file, languages_file, output_folder)
 
 
-def fixed_length_substrings(string, chunk_length):
-    substrings = []
-    for i in range(len(string)-chunk_length+1):
-        substrings.append(string[i:i + chunk_length])
+def get_labes(labels_file_path):
+    labels = []
+    with open(labels_file_path) as file:
+        for label in file:
+            labels.append(int(label.rstrip()))
 
-    return substrings
+    return labels
 
 
 # returns a set of all unique substrings of chunk_length and their occurrences in Counter object
@@ -192,21 +193,6 @@ def unique_substrings(string, chunk_length):
     return counter
 
 
-def write_strings_to_file(strings, file_path):
-    with open(file_path, 'w') as file:
-        for string in strings:
-            file.write(string + "\n")
-
-
-def get_labes(labels_file_path):
-    labels = []
-    with open(labels_file_path) as file:
-        for label in file:
-            labels.append(int(label.rstrip()))
-
-    return labels
-
-
 # returns the array of Counter objects which contain unique substrings the occurrences
 # of chunk_length for each string in test set
 def get_unique_substrings(test_file_path, chunk_length):
@@ -217,6 +203,19 @@ def get_unique_substrings(test_file_path, chunk_length):
 
     return counters
 
+
+def write_strings_to_file(strings, file_path):
+    with open(file_path, 'w') as file:
+        for string in strings:
+            file.write(string + "\n")
+
+
+def fixed_length_substrings(string, chunk_length):
+    substrings = []
+    for i in range(len(string)-chunk_length+1):
+        substrings.append(string[i:i + chunk_length])
+
+    return substrings
 
 # transforms the training set to be compatible with the algorithm
 # finds the shortest string in training set
@@ -240,8 +239,6 @@ def process_training_set(file_path):
 
 
 # AUC analysis of system calls data
-# self_file_path - test file with english
-# non_self_file_path - path of test file with other language
 # alpha_file_path - path of alphabet
 # output_folder - folder to save the results of AUC analysis
 def detect_syscall_intrusion(n,
