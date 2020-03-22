@@ -28,20 +28,24 @@ def compute_scores(n, r, training_file_path, test_file_path, alphabet):
     return scores
 
 
-def compute_scores1(n, r, training_file_path, counters, alphabet):
+def compute_scores_optimized(n, r, training_file_path, counters, alphabet):
     command = 'java -jar negsel2.jar -alphabet file://\'{}\' -self \'{}\' -n {} -r {} -c -l'.format(alphabet, training_file_path, n, r)
 
+    process = subprocess.Popen([command], shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, close_fds=True)
     computed_scores = []
     for counter in counters:
         scores = []
         for unique_sequence in counter.keys():
-            process = subprocess.Popen([command], shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, close_fds=True)
-            output, error = process.communicate(unique_sequence.encode('utf-8'))
+            process.stdin.write(unique_sequence.encode('utf-8'))
+            process.stdin.write(b'\n')
+            process.stdin.flush()
+            output = process.stdout.readline()
             score = float(output.rstrip()) * counter[unique_sequence]
             scores.append(score)
 
-            process.terminate()
-        computed_scores.append(scores.mean())
+        computed_scores.append(np.array(scores).mean())
+
+    process.terminate()
 
     return computed_scores
 
@@ -190,11 +194,11 @@ def get_labes(labels_file_path):
     return labels
 
 
-def get_unique_substrings(test_file_path):
+def get_unique_substrings(test_file_path, chunk_length):
     counters = []
     with open(test_file_path) as file:
         for sequence in file:
-            counters.append(unique_substrings(sequence.rstrip()))
+            counters.append(unique_substrings(sequence.rstrip(), chunk_length))
 
     return counters
 
@@ -209,7 +213,9 @@ def detect_syscall_intrusion(n,
     positive_num = len([x for x in labels if x == 1])
     negative_num = len([x for x in labels if x == 0])
 
-    scores = compute_scores(n, r, training_file_path, test_file_path, alpha_file_path)
+    test_counters = get_unique_substrings(test_file_path, n)
+
+    scores = compute_scores_optimized(n, r, training_file_path, test_counters, alpha_file_path)
     data = tuple(zip(scores, labels))
     auc = perform_roc_analysis(data, positive_num, negative_num, output_folder, r)
     return auc
@@ -225,7 +231,7 @@ def auc_analysis_syscalls(test_file_path, labels, training_file_path, alpha_file
         line = file.readline().rstrip()
         n = len(line)
 
-    r_range = range(1, 5)
+    r_range = range(1, n+1)
     for r in r_range:
         auc = detect_syscall_intrusion(n, r, test_file_path, labels, training_file_path, alpha_file_path, output_folder)
         print('For r = {} AUC = {} \n'.format(r, auc))
@@ -244,7 +250,7 @@ def main():
 
     syscalls_folder = 'syscalls'
     results_folder = 'task 2'
-    subfolders = ['snd-cert']# ['snd-cert', 'snd-unm']
+    subfolders = ['snd-cert', 'snd-unm']
     test_files_indexes = ['1'] # ['1', '2', '3']
 
     train_files_suffix = '.train'
