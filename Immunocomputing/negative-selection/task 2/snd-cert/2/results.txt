@@ -1,0 +1,2 @@
+For r = 4 AUC = 0.9688399999999999 
+r = 4 discriminates self and non-self best, AUC = 0.9688399999999999

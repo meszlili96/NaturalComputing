@@ -231,12 +231,14 @@ def auc_analysis_syscalls(test_file_path, labels, training_file_path, alpha_file
         line = file.readline().rstrip()
         n = len(line)
 
-    r_range = range(1, n+1)
-    for r in r_range:
-        auc = detect_syscall_intrusion(n, r, test_file_path, labels, training_file_path, alpha_file_path, output_folder)
-        print('For r = {} AUC = {} \n'.format(r, auc))
-        results += 'For r = {} AUC = {} \n'.format(r, auc)
-        r_performance.append((r, auc))
+    #r_range = range(1, n+1)
+    #for r in r_range:
+    r = 4
+
+    auc = detect_syscall_intrusion(n, r, test_file_path, labels, training_file_path, alpha_file_path, output_folder)
+    print('For r = {} AUC = {} \n'.format(r, auc))
+    results += 'For r = {} AUC = {} \n'.format(r, auc)
+    r_performance.append((r, auc))
 
     sorted_by_auc = sorted(r_performance, key=lambda tup: tup[1], reverse=True)
     results += 'r = {} discriminates self and non-self best, AUC = {}'.format(sorted_by_auc[0][0], sorted_by_auc[0][1])
@@ -251,7 +253,7 @@ def main():
     syscalls_folder = 'syscalls'
     results_folder = 'task 2'
     subfolders = ['snd-cert', 'snd-unm']
-    test_files_indexes = ['1'] # ['1', '2', '3']
+    test_files_indexes = ['2', '3']
 
     train_files_suffix = '.train'
     train_preprocessed_files_suffix = '.train_preprocessed'
