@@ -26,15 +26,15 @@ charset=UTF-8">
 				// Adhesion parameters
 				J : [ [0,20,20],
 					[20,20,100],                    // Cells
-					[20,20,20] ],                   // Obstacles
+					[200,200,200] ],                // Obstacles
 
 				// VolumeConstraint parameters
-				LAMBDA_V : [0,30,100],				// VolumeConstraint importance per cellkind
-				V : [0,100,200],                    // Target volume of each cellkind
+				LAMBDA_V : [0,30,1],				// VolumeConstraint importance per cellkind
+				V : [0,100,1000],                   // Target volume of each cellkind
 
 				// PerimeterConstraint parameters
-				LAMBDA_P : [0,0,100],				// PerimeterConstraint importance per cellkind
-				P : [0,0,200],					    // Target perimeter of each cellkind
+				LAMBDA_P : [0,0,1],				    // PerimeterConstraint importance per cellkind
+				P : [0,0,340],					    // Target perimeter of each cellkind
 
 				// ActivityConstraint parameters
 				LAMBDA_ACT : [0,500,0],			    // ActivityConstraint importance per cellkind
@@ -45,7 +45,7 @@ charset=UTF-8">
 			simsettings : {
 
 				// Cells on the grid
-				NRCELLS : [3,1],					// Number of cells to seed for all
+				NRCELLS : [3,3],					// Number of cells to seed for all
 				                                    // non-background cellkinds.
 				// Runtime etc
 				BURNIN : 500,
