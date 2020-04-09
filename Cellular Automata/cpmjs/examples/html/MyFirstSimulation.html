@@ -1,0 +1,58 @@
+<!-- Page setup and title -->
+<!DOCTYPE html>
+<html lang="en">
+<head><meta http-equiv="Content-Type" content="text/html;
+charset=UTF-8">
+    <title>PageTitle</title>
+    <style type="text/css">
+        body{
+            font-family: "HelveticaNeue-Light", sans-serif; padding : 15px;
+        }
+    </style>
+
+    <!-- Sourcing the cpm build -->
+    <script src="../../build/cpm.js"></script>
+    <script>
+		"use strict"
+
+		// Simulation code here.
+		let config = {
+
+			ndim : 2,
+			field_size : [50,50],
+			conf : {
+				T : 20, // CPM temperature
+
+				// Adhesion parameters:
+				J: [[0,20], [20,100]] ,
+
+				// VolumeConstraint parameters
+				LAMBDA_V : [0,50], // VolumeConstraint importance per cellkind
+				V : [0,500] // Target volume of each cellkind
+
+			},
+			simsettings : {
+				NRCELLS : [1],
+				RUNTIME : 500,
+				CANVASCOLOR : "eaecef",
+				zoom : 4
+			}
+		}
+		let sim
+		function initialize(){
+			sim = new CPM.Simulation( config )
+			step()
+		}
+		function step(){
+			sim.step()
+			requestAnimationFrame( step )
+		}
+    </script>
+</head>
+<body onload="initialize()">
+<h1>Your Page Title</h1>
+<p>
+    Description of your page.
+</p>
+</body>
+</html>
