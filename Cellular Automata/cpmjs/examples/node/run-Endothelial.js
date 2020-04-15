@@ -57,8 +57,8 @@ let config = {
 }
 
 let MOTILE_CELLS_NUMBER = 100
-let OBSTACLES_PER_ROW = 5
-let OBSTACLES_PER_COLUMN = 5
+let OBSTACLES_PER_ROW = 3
+let OBSTACLES_PER_COLUMN = 3
 
 // java script does not support testing of array for equality
 // and neither it supports operators overloading
