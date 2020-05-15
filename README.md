@@ -1,3 +1,5 @@
-# EvolutionaryGAN
+# Natural computing
 
-Code based on paper available at [https://github.com/WANG-Chaoyue/EvolutionaryGAN-pytorch](https://github.com/WANG-Chaoyue/EvolutionaryGAN-pytorch)
+The assignments and the project of Natural computing at Radboud.
+
+The project is located in `Project` foldes, the assignment folder are on the same level.
