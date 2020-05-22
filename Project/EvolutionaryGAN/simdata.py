@@ -166,7 +166,7 @@ class Grid(MixtureOfGaussians):
 
 def main():
     # Demonstration of data generation
-    iterable_dataset = MixtureOfGaussiansDataset(EightInCircle(scale=2))
+    iterable_dataset = MixtureOfGaussiansDataset(SimulatedDistribution.eight_gaussians)
     data_loader = DataLoader(iterable_dataset, batch_size=4)
     for batch in islice(data_loader, 8):
         print(batch)
