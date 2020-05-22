@@ -1,10 +1,10 @@
 import torch
 import torch.nn as nn
 
-from inputs import *
+from parser import Parser
 
 class Generator(nn.Module):
-    def __init__(self, ngpu):
+    def __init__(self, ngpu, nc, nz, ngf):
         super(Generator, self).__init__()
         self.ngpu = ngpu
         self.main = nn.Sequential(
@@ -34,7 +34,7 @@ class Generator(nn.Module):
         return self.main(input)
 
 class Discriminator(nn.Module):
-    def __init__(self, ngpu):
+    def __init__(self, ngpu, nc, ndf):
         super(Discriminator, self).__init__()
         self.ngpu = ngpu
         self.main = nn.Sequential(
@@ -60,3 +60,13 @@ class Discriminator(nn.Module):
 
     def forward(self, input):
         return self.main(input)
+
+
+# custom weights initialization called on netG and netD
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv') != -1:
+        nn.init.normal_(m.weight.data, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        nn.init.normal_(m.weight.data, 1.0, 0.02)
+        nn.init.constant_(m.bias.data, 0)
