@@ -1,6 +1,6 @@
 import torch.nn.parallel
+import matplotlib.pyplot as plt
 import torchvision.utils as vutils
-
 
 from data import *
 from parser import Parser
@@ -8,7 +8,8 @@ from model import Model
 
 if __name__ == '__main__':
     opt = Parser().parse()
-    dataset = create_dataset(opt)
+    dataset = toy_dataset(SimulatedDistribution.eight_gaussians)
+    #dataset = create_dataset(opt)
     model = Model(opt)
 
     iters = 0
@@ -89,8 +90,8 @@ if __name__ == '__main__':
 
     plt.figure(figsize=(10,5))
     plt.title("Generator and Discriminator Loss During Training")
-    plt.plot(G_losses,label="G")
-    plt.plot(D_losses,label="D")
+    plt.plot(model.G_losses,label="G")
+    plt.plot(model.D_losses,label="D")
     plt.xlabel("iterations")
     plt.ylabel("Loss")
     plt.legend()

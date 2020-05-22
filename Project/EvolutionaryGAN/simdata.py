@@ -1,9 +1,32 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from enum import Enum
 import random
-from mpl_toolkits.mplot3d import Axes3D
 from abc import ABCMeta, abstractmethod
+from enum import Enum
+from itertools import islice
+
+import matplotlib.pyplot as plt
+import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
+from torch.utils.data import DataLoader, IterableDataset
+
+
+class SimulatedDistribution(Enum):
+    eight_gaussians = 1
+    twenty_five_gaussians = 2
+
+class MixtureOfGaussiansDataset(IterableDataset):
+    def __init__(self, distribution: SimulatedDistribution):
+        super(MixtureOfGaussiansDataset).__init__()
+        if distribution == SimulatedDistribution.eight_gaussians:
+            self.mixture_of_gaussians = EightInCircle()
+        elif distribution == SimulatedDistribution.twenty_five_gaussians:
+            self.mixture_of_gaussians = Grid()
+        else:
+            raise ValueError
+
+    def __iter__(self):
+        # TODO: not sure yet if we need to adopt it for workers. All samples are independent
+        return self.mixture_of_gaussians.data_generator()
+
 
 # extracts arrays of x and y from point in sample
 # sample - array of 2d points
@@ -17,6 +40,7 @@ def extract_xy(sample):
         y.append(point[1])
 
     return x, y
+
 
 # abstract class which defines mixture of Gaussians distribution
 class MixtureOfGaussians:
@@ -33,14 +57,15 @@ class MixtureOfGaussians:
     # subclassed have to implement this method and provide the coordinates
     # of centers of all Gaussians included into mixture in scale*[-1,1] square
     @abstractmethod
-    def centers(self): raise NotImplementedError
+    def centers(self):
+        raise NotImplementedError
 
     # sample from the distribution
     def sample(self, sample_size=1):
         dataset = []
         for i in range(sample_size):
             mu = random.choice(self.centers())
-            cov = [[self.__stdev**2, 0], [0, self.__stdev**2]]
+            cov = [[self.__stdev ** 2, 0], [0, self.__stdev ** 2]]
             point = np.random.multivariate_normal(mu, cov)
             dataset.append(point)
 
@@ -75,7 +100,8 @@ class MixtureOfGaussians:
         # calculate PDF
         g = np.zeros(x.shape)
         for mu in mus:
-            g += np.exp(-(((x - mu[0]) ** 2 + (y - mu[1]) ** 2) / (2.0 * self.__stdev ** 2))) / 2 / np.pi / self.__stdev ** 2
+            g += np.exp(
+                -(((x - mu[0]) ** 2 + (y - mu[1]) ** 2) / (2.0 * self.__stdev ** 2))) / 2 / np.pi / self.__stdev ** 2
 
         return x, y, g
 
@@ -139,29 +165,35 @@ class Grid(MixtureOfGaussians):
 
 
 def main():
+    # Demonstration of data generation
+    iterable_dataset = MixtureOfGaussiansDataset(EightInCircle(scale=2))
+    data_loader = DataLoader(iterable_dataset, batch_size=4)
+    for batch in islice(data_loader, 8):
+        print(batch)
+
     # Demonstration of distributions 2d PDFs and 10 000 samples
     fig, axs = plt.subplots(2, 2)
     eight = EightInCircle(scale=2)
     grid = Grid(scale=2)
-    
+
     _, _, g1 = eight.distribution()
     axs[0, 0].imshow(g1)
-    
+
     _, _, g2 = grid.distribution()
     axs[0, 1].imshow(g2)
-    
+
     sample_size = 10000
-    
+
     generator = eight.data_generator(batch_size=sample_size)
     sample = next(generator)
-    x ,y = extract_xy(sample)
+    x, y = extract_xy(sample)
     axs[1, 0].scatter(x, y, s=1.5)
 
     generator = grid.data_generator(batch_size=sample_size)
     sample = next(generator)
-    x ,y = extract_xy(sample)
+    x, y = extract_xy(sample)
     axs[1, 1].scatter(x, y, s=1.5)
-    
+
     plt.show()
 
 
