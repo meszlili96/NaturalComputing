@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader, IterableDataset
 class SimulatedDistribution(Enum):
     eight_gaussians = 1
     twenty_five_gaussians = 2
+    standard_gaussian = 3
 
 class MixtureOfGaussiansDataset(IterableDataset):
     def __init__(self, distribution: SimulatedDistribution):
@@ -21,6 +22,8 @@ class MixtureOfGaussiansDataset(IterableDataset):
             self.mixture_of_gaussians = EightInCircle()
         elif distribution == SimulatedDistribution.twenty_five_gaussians:
             self.mixture_of_gaussians = Grid()
+        elif distribution == SimulatedDistribution.standard_gaussian:
+            self.mixture_of_gaussians = StandardGaussian(stdev=1)
         else:
             raise ValueError
 
@@ -173,7 +176,7 @@ class StandardGaussian(MixtureOfGaussians):
 
 def main():
     # Demonstration of data generation
-    iterable_dataset = MixtureOfGaussiansDataset(SimulatedDistribution.eight_gaussians)
+    iterable_dataset = MixtureOfGaussiansDataset(SimulatedDistribution.standard_gaussian)
     data_loader = DataLoader(iterable_dataset, batch_size=4)
     for batch in islice(data_loader, 8):
         print(batch)
