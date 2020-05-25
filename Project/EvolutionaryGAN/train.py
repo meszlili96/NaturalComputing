@@ -8,8 +8,11 @@ from model import Model
 
 if __name__ == '__main__':
     opt = Parser().parse()
-    dataset = toy_dataset(SimulatedDistribution.eight_gaussians)
-    #dataset = create_dataset(opt)
+    if opt.dataroot is not None:
+        dataset = create_dataset(opt)
+    else:
+        dataset = toy_dataset(SimulatedDistribution.eight_gaussians)
+
     model = Model(opt)
 
     iters = 0

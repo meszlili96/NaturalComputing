@@ -13,7 +13,7 @@ class Parser():
         self.initialized = False
 
     def initialize(self, parser):
-        parser.add_argument('--dataroot', required=True, help='the path to the root of the dataset folder')
+        parser.add_argument('--dataroot', help='the path to the root of the dataset folder')
         parser.add_argument('--workers', type=int, required=True, help='the number of worker threads for loading the data with the DataLoader')
         parser.add_argument('--batch_size', type=int, required=True, help='the batch size used in training')
         parser.add_argument('--image_size', type=int, default=64, help='the spatial size of the images used for training')
