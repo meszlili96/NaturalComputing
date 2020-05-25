@@ -2,12 +2,13 @@ import random
 from abc import ABCMeta, abstractmethod
 from enum import Enum
 from itertools import islice
-
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 from torch.utils.data import DataLoader, IterableDataset
 
+# To add a new distribution subclass MixtureOfGaussians and specify Gaussians centers in a unit square
+# Then add a new case to SimulatedDistribution enum and expand MixtureOfGaussiansDataset with it
 
 class SimulatedDistribution(Enum):
     eight_gaussians = 1
@@ -162,6 +163,12 @@ class Grid(MixtureOfGaussians):
         # to lie inside scale*[-1,1] square
         centers = [(self.scale * x, self.scale * y) for x, y in zip(x.flatten(), y.flatten())]
         return centers
+
+# evenly spaced squared grid of Gaussians
+class StandardGaussian(MixtureOfGaussians):
+    # size - the number of Gaussians per row and column
+    def centers(self):
+        return [(0, 0)]
 
 
 def main():
