@@ -35,7 +35,7 @@ class MixtureOfGaussiansDataset(IterableDataset):
 # extracts arrays of x and y from point in sample
 # sample - array of 2d points
 # x - coordinates on x axis
-# x - coordinates on y axis
+# y - coordinates on y axis
 def extract_xy(sample):
     x, y = [], []
 
