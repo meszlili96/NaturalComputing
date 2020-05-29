@@ -1,5 +1,6 @@
 import torch.optim as optim
 from nets import *
+from gen_losses import *
 
 class Model():
     def __init__(self, opt):
@@ -22,7 +23,7 @@ class Model():
         self.D_losses = []
 
         # Initialize BCELoss function
-        self.criterion = nn.BCELoss()
+        self.criterion = LeastSquares()
 
         # Establish convention for real and fake labels during training
         self.real_label = 1

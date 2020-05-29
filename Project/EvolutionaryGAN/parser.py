@@ -24,7 +24,7 @@ class Parser():
         parser.add_argument('--num_epochs', type=int, required=True, help='number of training epochs to run')
         parser.add_argument('--lr', type=float, default=0.0002, help='learning rate for training')
         parser.add_argument('--beta1', type=float, default=0.5, help='hyperparameter for Adam optimizers')
-        parser.add_argument('--ngpu', type=int, default=0.0002, help='number of GPUs available, use 0 for CPU mode')
+        parser.add_argument('--ngpu', type=int, default=0, help='number of GPUs available, use 0 for CPU mode')
 
         self.initialized = True
         return parser

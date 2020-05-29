@@ -35,7 +35,7 @@ if __name__ == '__main__':
             # Forward pass real batch through D
             output = model.netD(real_cpu).view(-1)
             # Calculate loss on all-real batch
-            errD_real = model.criterion(output, label)
+            errD_real = model.criterion(output)
             # Calculate gradients for D in backward pass
             errD_real.backward()
             D_x = output.mean().item()
@@ -49,7 +49,7 @@ if __name__ == '__main__':
             # Classify all fake batch with D
             output = model.netD(fake.detach()).view(-1)
             # Calculate D's loss on the all-fake batch
-            errD_fake = model.criterion(output, label)
+            errD_fake = model.criterion(output)
             # Calculate the gradients for this batch
             errD_fake.backward()
             D_G_z1 = output.mean().item()
@@ -66,7 +66,7 @@ if __name__ == '__main__':
             # Since we just updated D, perform another forward pass of all-fake batch through D
             output = model.netD(fake).view(-1)
             # Calculate G's loss based on this output
-            errG = model.criterion(output, label)
+            errG = model.criterion(output)
             # Calculate gradients for G
             errG.backward()
             D_G_z2 = output.mean().item()
