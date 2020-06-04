@@ -1,6 +1,7 @@
 import torch.optim as optim
 from nets import *
 from gen_losses import *
+from discr_loss import DiscriminatorLoss
 
 class Model():
     def __init__(self, opt):
@@ -10,8 +11,8 @@ class Model():
 
         # Handle multi-gpu if desired
         if (opt.device.type == 'cuda') and (opt.ngpu > 1):
-            netG = nn.DataParallel(netG, list(range(opt.ngpu)))
-            netD = nn.DataParallel(netD, list(range(opt.ngpu)))
+            self.netG = nn.DataParallel(self.netG, list(range(opt.ngpu)))
+            self.netD = nn.DataParallel(self.netD, list(range(opt.ngpu)))
 
         # Apply the weights_init function to randomly initialize all weights to mean=0, stdev=0.2.
         self.netG.apply(weights_init)
@@ -22,8 +23,9 @@ class Model():
         self.G_losses = []
         self.D_losses = []
 
-        # Initialize BCELoss function
-        self.criterion = LeastSquares()
+        # Initialize Discriminator and generator loss functions
+        self.g_criterion = LeastSquares()
+        self.d_criterion = DiscriminatorLoss()
 
         # Establish convention for real and fake labels during training
         self.real_label = 1

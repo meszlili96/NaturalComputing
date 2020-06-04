@@ -1,4 +1,4 @@
-python train.py \
+python3 ../train.py \
 --dataroot celeba \
 --workers 2 \
 --batch_size 128 \

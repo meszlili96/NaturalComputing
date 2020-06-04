@@ -5,7 +5,7 @@ from abc import ABCMeta, abstractmethod
 import matplotlib.pyplot as plt
 
 # Abstract class to define custom loss functions for Generator
-# call returns Generator on Discriminator output for fake samples
+# call returns Generator loss on Discriminator output for fake samples
 class GeneratorLoss(nn.Module):
     __metaclass__ = ABCMeta
 
@@ -111,7 +111,7 @@ def main():
     plt.xlabel('Discriminator output')
     plt.ylabel('Loss')
     # We zoom in by y axis, otherwise least squares loss is invisible
-    plt.axis([0, 1, -5, 5])
+    plt.axis([0, 1, -4, 4])
     plt.legend()
     plt.show()
 

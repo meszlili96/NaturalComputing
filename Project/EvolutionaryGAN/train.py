@@ -26,35 +26,36 @@ if __name__ == '__main__':
             ############################
             # (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)))
             ###########################
+            # TODO: I'm not sure I did not break it! But we can just roll back with git
             ## Train with all-real batch
             model.netD.zero_grad()
             # Format batch
+            # Real data
             real_cpu = data[0].to(opt.device)
             b_size = real_cpu.size(0)
+            # TODO: is this variable used?
             label = torch.full((b_size,), model.real_label, device=opt.device)
             # Forward pass real batch through D
-            output = model.netD(real_cpu).view(-1)
-            # Calculate loss on all-real batch
-            errD_real = model.criterion(output)
-            # Calculate gradients for D in backward pass
-            errD_real.backward()
-            D_x = output.mean().item()
-
+            output_real = model.netD(real_cpu).view(-1)
             ## Train with all-fake batch
             # Generate batch of latent vectors
             noise = torch.randn(b_size, opt.nz, 1, 1, device=opt.device)
             # Generate fake image batch with G
             fake = model.netG(noise)
+            # TODO: is this variable used?
             label.fill_(model.fake_label)
             # Classify all fake batch with D
-            output = model.netD(fake.detach()).view(-1)
-            # Calculate D's loss on the all-fake batch
-            errD_fake = model.criterion(output)
-            # Calculate the gradients for this batch
-            errD_fake.backward()
+            output_fake = model.netD(fake.detach()).view(-1)
+
+            # Calculate loss for fake and real sample
+            errD_fake, errD_real = model.criterion(output)
+            # Backpropagate full error
+            errD = errD_fake + errD_real
+            errD.backward()
+
+            D_x = output_real.mean().item()
             D_G_z1 = output.mean().item()
-            # Add the gradients from the all-real and all-fake batches
-            errD = errD_real + errD_fake
+
             # Update D
             model.optimizerD.step()
 
@@ -66,7 +67,7 @@ if __name__ == '__main__':
             # Since we just updated D, perform another forward pass of all-fake batch through D
             output = model.netD(fake).view(-1)
             # Calculate G's loss based on this output
-            errG = model.criterion(output)
+            errG = model.g_criterion(output)
             # Calculate gradients for G
             errG.backward()
             D_G_z2 = output.mean().item()
