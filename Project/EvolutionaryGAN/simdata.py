@@ -169,9 +169,12 @@ class Grid(MixtureOfGaussians):
 
 # evenly spaced squared grid of Gaussians
 class StandardGaussian(MixtureOfGaussians):
-    # size - the number of Gaussians per row and column
+    def __init__(self, stdev=0.2, scale=1., center=(0, 0)):
+        super().__init__(stdev, scale)
+        self.__center = center
+
     def centers(self):
-        return [(0, 0)]
+        return [self.__center]
 
 
 def main():

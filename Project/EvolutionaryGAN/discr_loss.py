@@ -30,8 +30,8 @@ class DiscriminatorLoss(nn.Module):
         return target_label.repeat(labels_dim)
 
     def __call__(self, fake_prediction, real_prediction):
-        reals_labels = self.get_target_labels(real_prediction.shape, True)
         fake_labels = self.get_target_labels(fake_prediction.shape, False)
+        reals_labels = self.get_target_labels(real_prediction.shape, True)
 
         loss_fake = self.loss(fake_prediction, fake_labels)
         loss_real = self.loss(real_prediction, reals_labels)
