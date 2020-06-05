@@ -60,8 +60,10 @@ class DummyDiscriminator(nn.Module):
         self.layer_1 = nn.Linear(2, 32)
         # hidden layer
         self.layer_2 = nn.Linear(32, 64)
+        # hidden layer
+        self.layer_3 = nn.Linear(64, 128)
         # output layer
-        self.layer_out = nn.Linear(64, 1)
+        self.layer_out = nn.Linear(128, 1)
         # activation
         self.relu = nn.ReLU()
         # binary classification activation
@@ -70,12 +72,13 @@ class DummyDiscriminator(nn.Module):
     def forward(self, inputs):
         x = self.relu(self.layer_1(inputs))
         x = self.relu(self.layer_2(x))
+        x = self.relu(self.layer_3(x))
         x = self.sigmoid(self.layer_out(x))
         return x
 
 def train(discriminator, loss, real_distr):
-    n_epochs = 10
-    batch_per_epoch = 200
+    n_epochs = 20
+    batch_per_epoch = 400
     batch_size = 10
     optimizer = torch.optim.Adam(discriminator.parameters(), lr=1e-3)
 
@@ -88,7 +91,7 @@ def train(discriminator, loss, real_distr):
             real_sample = real_distr.sample(batch_size)
             real_prediction = discriminator(torch.tensor(real_sample).float())
             # for simplicity fake samples are from uniform distr
-            fake_sample = torch.rand(batch_size, 2)
+            fake_sample = -2*torch.rand(batch_size, 2) + 1
             fake_prediction = discriminator(torch.tensor(fake_sample).float())
 
             fake_loss, real_loss = loss(fake_prediction, real_prediction)
