@@ -17,21 +17,21 @@ class DiscriminatorLoss(nn.Module):
 
     """Create label tensors with the same size as the input.
             Parameters:
-                prediction (tensor) - the prediction from a discriminator
+                labels_dim - the dimensionality of prediction from a discriminator
                 target_is_real (bool) - if the ground truth label is for real images or fake images
             Returns:
                 A label tensor filled with ground truth label, and with the size of the input
         """
 
-    def get_target_labels(self, prediction, target_is_real):
+    def get_target_labels(self, labels_dim, target_is_real):
         # tensor of size 1
         target_label = self.real_label if target_is_real else self.fake_label
         # create the tensor of len(prediction) with target_label values
-        return target_label.expand_as(prediction)
+        return target_label.repeat(labels_dim)
 
     def __call__(self, fake_prediction, real_prediction):
-        reals_labels = self.get_target_labels(real_prediction, True)
-        fake_labels = self.get_target_labels(fake_prediction, False)
+        reals_labels = self.get_target_labels(real_prediction.shape, True)
+        fake_labels = self.get_target_labels(fake_prediction.shape, False)
 
         loss_fake = self.loss(fake_prediction, fake_labels)
         loss_real = self.loss(real_prediction, reals_labels)
@@ -68,7 +68,6 @@ def main():
     plt.xlabel('Discriminator output')
     plt.ylabel('Loss')
     # We zoom in by y axis, otherwise least squares loss is invisible
-    #plt.axis([0, 1, -4, 4])
     plt.legend()
 
     fig = plt.figure()

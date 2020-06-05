@@ -29,16 +29,16 @@ class GeneratorLoss(nn.Module):
 
     """Create label tensors with the same size as the input.
         Parameters:
-            prediction (tensor) - the prediction from a discriminator
+            labels_dim - the dimensionality of prediction from a discriminator
             target_is_real (bool) - if the ground truth label is for real images or fake images
         Returns:
             A label tensor filled with ground truth label, and with the size of the input
     """
-    def get_target_labels(self, prediction, target_is_real):
+    def get_target_labels(self, labels_dim, target_is_real):
         # tensor of size 1
         target_label = self.real_label if target_is_real else self.fake_label
         # create the tensor of len(prediction) with target_label values
-        return target_label.expand_as(prediction)
+        return target_label.repeat(labels_dim)
 
     """Calculate loss given Discriminator's output on fake samples
         Parameters:
@@ -57,7 +57,7 @@ class Minmax(GeneratorLoss):
     # fake_prediction (tensor) - the prediction output from a discriminator
     def loss(self, fake_prediction):
         # minmax objective function is equivalen to -BCE with target labels of fake samples (0)
-        fake_labels = self.get_target_labels(fake_prediction, False)
+        fake_labels = self.get_target_labels(fake_prediction.shape, False)
         loss_fake = -self.loss_func(fake_prediction, fake_labels)
         return loss_fake
 
@@ -69,7 +69,7 @@ class Heuristic(GeneratorLoss):
     # fake_prediction (tensor) - the prediction output from a discriminator
     def loss(self, fake_prediction):
         # heuristic objective function is equivalen to BCE with target labels of real samples (1)
-        real_labels = self.get_target_labels(fake_prediction, True)
+        real_labels = self.get_target_labels(fake_prediction.shape, True)
         loss_fake = self.loss_func(fake_prediction, real_labels)
         return loss_fake
 
@@ -82,8 +82,8 @@ class LeastSquares(GeneratorLoss):
     def loss(self, fake_prediction):
         # lest square mutation is just a MSE of discriminator output for fake samples and
         # labels of real samples (1)
-        real_tensor = self.get_target_labels(fake_prediction, True)
-        loss_fake = self.loss_func(fake_prediction, real_tensor)
+        real_labels = self.get_target_labels(fake_prediction.shape, True)
+        loss_fake = self.loss_func(fake_prediction, real_labels)
         return loss_fake
 
 
