@@ -1,8 +1,8 @@
 import numpy as np
 import torch
 import torch.nn as nn
-from simdata import EightInCircle, StandardGaussian
 from discr_loss import DiscriminatorLoss
+from simdata import *
 
 # discriminator - discriminator network
 # criterion - discriminator loss function
@@ -76,23 +76,23 @@ class DummyDiscriminator(nn.Module):
         x = self.sigmoid(self.layer_out(x))
         return x
 
-def train(discriminator, loss, real_distr):
+def train(discriminator, loss, data_loader):
     n_epochs = 20
     batch_per_epoch = 400
-    batch_size = 10
+    batch_size = 16
     optimizer = torch.optim.Adam(discriminator.parameters(), lr=1e-3)
 
     discriminator.train()
     for epoch in range(0, n_epochs):
         epoch_loss = 0
-        for batch in range(0, batch_per_epoch):
+        for real_sample in islice(data_loader, batch_per_epoch):
             optimizer.zero_grad()
 
-            real_sample = real_distr.sample(batch_size)
-            real_prediction = discriminator(torch.tensor(real_sample).float())
+            # TODO: see if we can move this conversion to data generation
+            real_prediction = discriminator(real_sample.float())
             # for simplicity fake samples are from uniform distr
-            fake_sample = -2*torch.rand(batch_size, 2) + 1
-            fake_prediction = discriminator(torch.tensor(fake_sample).float())
+            fake_sample = -2 * torch.rand(batch_size, 2) + 1
+            fake_prediction = discriminator(fake_sample)
 
             fake_loss, real_loss = loss(fake_prediction, real_prediction)
             lv = fake_loss + real_loss
@@ -141,14 +141,16 @@ def main():
     # Generator Fitness function demonstration
     # We assume that real distribution is 8 gaussians and our generator learned only one center
     # We first train the discriminator to learn 8 gaussians against unifrom
-    real_distr = EightInCircle()
-    real_samples = real_distr.sample(10)
+    iterable_dataset = MixtureOfGaussiansDataset(SimulatedDistribution.eight_gaussians)
+    data_loader = DataLoader(iterable_dataset, batch_size=16)
     discriminator = DummyDiscriminator()
     loss = DiscriminatorLoss()
     print("Training the discriminator on eight gaussians in circle:")
-    train(discriminator, loss, real_distr)
+    train(discriminator, loss, data_loader)
 
     discriminator.eval()
+    real_distr = EightInCircle()
+    real_samples = real_distr.sample(10)
     print("Quality and diversity have equal weight:")
     compute_fitness(discriminator, loss, real_samples, gamma=1)
     print("Zero diversity weight:")
