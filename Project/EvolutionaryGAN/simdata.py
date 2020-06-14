@@ -6,6 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 from torch.utils.data import DataLoader, IterableDataset
+import torch
+import torch.nn as nn
 
 # To add a new distribution subclass MixtureOfGaussians and specify Gaussians centers in a unit square
 # Then add a new case to SimulatedDistribution enum and expand MixtureOfGaussiansDataset with it
@@ -16,14 +18,14 @@ class SimulatedDistribution(Enum):
     standard_gaussian = 3
 
 class MixtureOfGaussiansDataset(IterableDataset):
-    def __init__(self, distribution: SimulatedDistribution, length=None):
+    def __init__(self, distribution: SimulatedDistribution, stdev=0.2, scale=1., length=None):
         super(MixtureOfGaussiansDataset).__init__()
         if distribution == SimulatedDistribution.eight_gaussians:
-            self.mixture_of_gaussians = EightInCircle(length=length)
+            self.mixture_of_gaussians = EightInCircle(stdev=stdev, scale=scale, length=length)
         elif distribution == SimulatedDistribution.twenty_five_gaussians:
-            self.mixture_of_gaussians = Grid(length=length)
+            self.mixture_of_gaussians = Grid(stdev=stdev, scale=scale,length=length)
         elif distribution == SimulatedDistribution.standard_gaussian:
-            self.mixture_of_gaussians = StandardGaussian(stdev=1, length=length)
+            self.mixture_of_gaussians = StandardGaussian(stdev=stdev, scale=scale, length=length)
         else:
             raise ValueError
 
@@ -168,7 +170,7 @@ class EightInCircle(MixtureOfGaussians):
 # evenly spaced squared grid of Gaussians
 class Grid(MixtureOfGaussians):
     # size - the number of Gaussians per row and column
-    def __init__(self, stdev=0.2, scale=1., size=5,length=None):
+    def __init__(self, stdev=0.2, scale=1., size=5, length=None):
         super().__init__(stdev, scale, length)
         self.__size = size
 
@@ -180,6 +182,7 @@ class Grid(MixtureOfGaussians):
         centers = [(self.scale * x, self.scale * y) for x, y in zip(x.flatten(), y.flatten())]
         return centers
 
+
 # evenly spaced squared grid of Gaussians
 class StandardGaussian(MixtureOfGaussians):
     def __init__(self, stdev=0.2, scale=1., center=(0, 0), length=None):
@@ -188,6 +191,71 @@ class StandardGaussian(MixtureOfGaussians):
 
     def centers(self):
         return [self.__center]
+
+
+class ToyDiscriminator(nn.Module):
+    def __init__(self, hidden_dim=512):
+        super(ToyDiscriminator, self).__init__()
+        # Number of input features is 2, since we work with 2d gaussians
+        # Define 3 dense layers with the same number of hidden units
+        self.layer_1 = nn.Linear(2, hidden_dim)
+        self.layer_2 = nn.Linear(hidden_dim, hidden_dim)
+        self.layer_3 = nn.Linear(hidden_dim, hidden_dim)
+        # output layer
+        self.layer_out = nn.Linear(hidden_dim, 1)
+        # Batch normalization
+        self.batch_norm = nn.BatchNorm1d(1)
+        # Relu activation is for hidden layers
+        self.relu = nn.ReLU()
+        # Sigmoid activation is for output binary classification layer
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, sample):
+        x = self.relu(self.layer_1(sample))
+        x = self.relu(self.batch_norm(self.layer_2(x)))
+        x = self.relu(self.layer_3(x))
+        output = self.sigmoid(self.layer_out(x))
+        return output
+
+class ToyGenerator(nn.Module):
+    def __init__(self, hidden_dim=512):
+        super(ToyGenerator, self).__init__()
+        # Number of input features is 2, since our noise is 2D
+        # Define 3 dense layers with the same number of hidden units
+        self.layer_1 = nn.Linear(2, hidden_dim)
+        self.layer_2 = nn.Linear(hidden_dim, hidden_dim)
+        self.layer_3 = nn.Linear(hidden_dim, hidden_dim)
+        # output layer
+        self.layer_out = nn.Linear(hidden_dim, 2)
+        # Relu activation is for hidden layers
+        self.relu = nn.ReLU()
+
+    def forward(self, noise):
+        x = self.relu(self.layer_1(noise))
+        x = self.relu(self.layer_2(x))
+        x = self.relu(self.layer_3(x))
+        output = self.layer_out(x)
+        out_shape = output.shape
+        # Reshape the output to discriminator input format
+        return output.reshape((out_shape[0], 1, out_shape[1]))
+
+
+# The function to initialize NN weights
+# Recursively applied to the layers of the passed module
+# m - nn.Module object
+def weighs_init_toy(m):
+    if type(m) == nn.Linear:
+        nn.init.xavier_uniform_(m.weight)
+        m.bias.data.fill_(0.01)
+
+
+def save_sample(sample, path):
+    x, y = extract_xy(sample)
+
+    plt.figure()
+    plt.scatter(x, y, s=1.5)
+    plt.savefig(path)
+    plt.close()
 
 
 def main():

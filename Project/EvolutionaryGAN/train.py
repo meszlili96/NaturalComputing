@@ -1,102 +1,100 @@
 import torch.nn.parallel
 import matplotlib.pyplot as plt
 import torchvision.utils as vutils
+import numpy as np
 
-from data import *
 from parser import Parser
-from model import Model
+from model import ToyModel, CelebModel
+
+# Samples noise from unifrom distribution for Generator
+def sample_noise(size):
+    noise = -1 * torch.rand(size, 2) + 0.5
+    return noise
+
+
+def train_discriminator(model, fake_sample, real_sample):
+    model.d_optimizer.zero_grad()
+    real_prediction = model.discriminator(real_sample)
+    # get fake sample from generator
+    fake_prediction = model.discriminator(fake_sample)
+
+    fake_loss, real_loss = model.d_loss(fake_prediction, real_prediction)
+    full_loss = fake_loss + real_loss
+
+    full_loss.backward()
+    model.d_optimizer.step()
+    return full_loss.item(), real_prediction, fake_prediction
+
+
+def train_generator(model, fake_sample):
+    model.g_optimizer.zero_grad()
+    # Since we just updated D, perform another forward pass of all-fake batch through D
+    d_output = model.discriminator(fake_sample).view(-1)
+    # Calculate G's loss based on this output
+    g_loss = model.g_loss(d_output)
+    # Calculate gradients for G
+    g_loss.backward()
+    # Update G
+    model.g_optimizer.step()
+    return g_loss.item(), d_output
+
 
 if __name__ == '__main__':
     opt = Parser().parse()
-    if opt.dataroot is not None:
-        dataset = create_dataset(opt)
-    else:
-        dataset = toy_dataset(SimulatedDistribution.eight_gaussians)
+    model = ToyModel(opt)
 
-    model = Model(opt)
-
-    iters = 0
     # Create batch of latent vectors that we will use to visualize the progression of the generator
-    fixed_noise = torch.randn(64, opt.nz, 1, 1, device=opt.device)
+    fixed_noise = sample_noise(10000)
+    num_epochs = opt.num_epochs
+    results_folder = "../results/"
     print("Starting Training Loop...")
-    for epoch in range(1):
+    steps_per_epoch = int(np.floor(len(model.dataset)/opt.batch_size))
+    iter = 0
+    for epoch in range(num_epochs):
         # For each batch in the dataloader
-        for i, data in enumerate(dataset, 0):
+        for i, real_sample in enumerate(model.dataset, 0):
+            ############################
+            # (1) Update Discriminator network
+            ###########################
+            fake_sample = model.generator(sample_noise(opt.batch_size)).detach()
+            d_loss, real_out, fake_out = train_discriminator(model,
+                                                             fake_sample,
+                                                             real_sample.float())
+            model.d_losses.append(d_loss)
 
             ############################
-            # (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)))
+            # (2) Update Generator network
             ###########################
-            # TODO: I'm not sure I did not break it! But we can just roll back with git
-            ## Train with all-real batch
-            model.netD.zero_grad()
-            # Format batch
-            # Real data
-            real_cpu = data[0].to(opt.device)
-            b_size = real_cpu.size(0)
-            # TODO: is this variable used?
-            label = torch.full((b_size,), model.real_label, device=opt.device)
-            # Forward pass real batch through D
-            output_real = model.netD(real_cpu).view(-1)
-            ## Train with all-fake batch
-            # Generate batch of latent vectors
-            noise = torch.randn(b_size, opt.nz, 1, 1, device=opt.device)
-            # Generate fake image batch with G
-            fake = model.netG(noise)
-            # TODO: is this variable used?
-            label.fill_(model.fake_label)
-            # Classify all fake batch with D
-            output_fake = model.netD(fake.detach()).view(-1)
+            fake_sample = model.generator(sample_noise(opt.batch_size))
 
-            # Calculate loss for fake and real sample
-            errD_fake, errD_real = model.criterion(output)
-            # Backpropagate full error
-            errD = errD_fake + errD_real
-            errD.backward()
-
-            D_x = output_real.mean().item()
-            D_G_z1 = output.mean().item()
-
-            # Update D
-            model.optimizerD.step()
-
-            ############################
-            # (2) Update G network: maximize log(D(G(z)))
-            ###########################
-            model.netG.zero_grad()
-            label.fill_(model.real_label)  # fake labels are real for generator cost
-            # Since we just updated D, perform another forward pass of all-fake batch through D
-            output = model.netD(fake).view(-1)
-            # Calculate G's loss based on this output
-            errG = model.g_criterion(output)
-            # Calculate gradients for G
-            errG.backward()
-            D_G_z2 = output.mean().item()
-            # Update G
-            model.optimizerG.step()
-
+            g_loss, fake_out2 = train_generator(model,
+                                                fake_sample)
+            model.g_losses.append(g_loss)
             # Output training stats
-            if i % 50 == 0:
+            iter += 1
+
+            # Each few iterations we plot statistics with current discriminator loss, generator loss,
+            # mean of discriminator prediction for real sample,
+            # mean of discriminator prediction for fake sample before discriminator was trained,
+            # mean of discriminator prediction for fake sample after discriminator was trained,
+            if iter % 100 == 0:
                 print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
-                      % (epoch, opt.num_epochs, i, len(dataset),
-                         errD.item(), errG.item(), D_x, D_G_z1, D_G_z2))
+                % (epoch, num_epochs, iter, steps_per_epoch,
+                d_loss, g_loss, real_out.mean().item(), fake_out.mean().item(), fake_out2.mean().item()))
 
-            # Save Losses for plotting later
-            model.G_losses.append(errG.item())
-            model.D_losses.append(errD.item())
 
-            # Check how the generator is doing by saving G's output on fixed_noise
-            if (iters % 500 == 0) or ((epoch == opt.num_epochs-1) and (i == len(dataset)-1)):
-                with torch.no_grad():
-                    fake = model.netG(fixed_noise).detach().cpu()
-                model.img_list.append(vutils.make_grid(fake, padding=2, normalize=True))
+        # Check how the generator is doing by saving G's output on fixed_noise
+        # I moved it to the end of epoch, but it can be done based on iter value too
+        with torch.no_grad():
+            fake = model.generator(fixed_noise)
+        fake_shape = fake.shape
+        model.save_gen_sample(fake.reshape((fake_shape[0], fake_shape[2])).numpy(), "{}epoch {}.png".format(results_folder, epoch + 1))
 
-            iters += 1
-
-    plt.figure(figsize=(10,5))
+    plt.figure(figsize=(10, 5))
     plt.title("Generator and Discriminator Loss During Training")
-    plt.plot(model.G_losses,label="G")
-    plt.plot(model.D_losses,label="D")
+    plt.plot(model.g_losses, label="G")
+    plt.plot(model.d_losses, label="D")
     plt.xlabel("iterations")
     plt.ylabel("Loss")
     plt.legend()
-    plt.show()
+    plt.savefig("{}train_summary.png".format(results_folder))

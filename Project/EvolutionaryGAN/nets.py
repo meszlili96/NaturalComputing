@@ -63,7 +63,7 @@ class Discriminator(nn.Module):
 
 
 # custom weights initialization called on netG and netD
-def weights_init(m):
+def weights_init_celeb(m):
     classname = m.__class__.__name__
     if classname.find('Conv') != -1:
         nn.init.normal_(m.weight.data, 0.0, 0.02)

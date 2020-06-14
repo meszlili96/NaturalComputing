@@ -24,7 +24,12 @@ class Parser():
         parser.add_argument('--num_epochs', type=int, required=True, help='number of training epochs to run')
         parser.add_argument('--lr', type=float, default=0.0002, help='learning rate for training')
         parser.add_argument('--beta1', type=float, default=0.5, help='hyperparameter for Adam optimizers')
+        parser.add_argument('--beta2', type=float, default=0.999, help='hyperparameter for Adam optimizers')
         parser.add_argument('--ngpu', type=int, default=0, help='number of GPUs available, use 0 for CPU mode')
+        parser.add_argument('--toy_type', type=int, help='type of toy dataset, 1 - eight gaussians, 2 - twenty five gaussians, 3 - standard gaussian')
+        parser.add_argument('--toy_std', type=float, default=0.2, help='standard deviation of gaussians in mixture')
+        parser.add_argument('--toy_scale', type=float, default=1.0, help='scale of unit square for toy dataset')
+        parser.add_argument('--toy_len', type=int, default=1000, help='length of toy dataset, technically it is infinite, but used for more generic implementation')
 
         self.initialized = True
         return parser
