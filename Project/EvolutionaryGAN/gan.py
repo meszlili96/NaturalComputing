@@ -5,6 +5,40 @@ from gen_losses import *
 from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, save_sample
 from discr_loss import DiscriminatorLoss
 
+
+class Options():
+    def __init__(self, ngpu=0):
+        self.num_epochs = 32
+        self.ngpu = 0
+        self.lr = 1e-03
+        self.beta1 = 0.5
+        self.beta2 = 0.999
+        self.g_loss = 1
+        self.batch_size = 100
+        self.workers = 1
+        self.device = torch.device("cuda:0" if (torch.cuda.is_available() and self.ngpu > 0) else "cpu")
+
+
+class ToyOptions(Options):
+    def __init__(self, ngpu=0):
+        super().__init__(ngpu=ngpu)
+        self.toy_type = 1
+        self.toy_std = 0.2
+        self.toy_scale = 1.0
+        self.toy_len = 100000
+
+
+class CelebOptions(Options):
+    def __init__(self, ngpu=0):
+        super().__init__(ngpu=ngpu)
+        self.nc = 3
+        self.ndf = 64
+        self.ngf = 64
+        self.nz = 100
+        self.image_size = 64
+        self.dataroot = "celeba"
+
+
 """
 GAN abstract class is a formal protocol, which defines the objects used in GAN training
 Properties:
@@ -66,15 +100,21 @@ class GAN():
 
     """Defines and returns discriminator loss function, torch.nn.Module object
     """
-    @abstractmethod
     def create_d_loss(self):
-        raise NotImplementedError
+        return DiscriminatorLoss()
 
     """Defines and returns generator loss function, torch.nn.Module object
     """
     @abstractmethod
     def create_g_loss(self):
-        raise NotImplementedError
+        if self.opt.g_loss == 1:
+            return Minmax()
+        elif self.opt.g_loss == 2:
+            return Heuristic()
+        elif self.opt.g_loss == 3:
+            return LeastSquares()
+        else:
+            raise ValueError
 
     """Defines and returns function that initializes NN weights
     """
@@ -104,12 +144,6 @@ class ToyGAN(GAN):
     def create_generator(self):
         return ToyGenerator()
 
-    def create_d_loss(self):
-        return DiscriminatorLoss()
-
-    def create_g_loss(self):
-        return Minmax()
-
     def weights_init_func(self):
         return weighs_init_toy
 
@@ -130,12 +164,6 @@ class CelebGAN(GAN):
 
     def create_generator(self):
         return Generator(self.opt.ngpu, self.opt.nc, self.opt.nz, self.opt.ngf).to(self.opt.device)
-
-    def create_d_loss(self):
-        return DiscriminatorLoss()
-
-    def create_g_loss(self):
-        return Minmax()
 
     def weights_init_func(self):
         return weights_init_celeb

@@ -10,5 +10,6 @@ python3.7 ../train_opt.py \
 --num_epochs 5 \
 --lr 0.0002 \
 --beta1 0.5 \
+--beta2 0.999 \
 --ngpu 0 \
 --g_loss 2
