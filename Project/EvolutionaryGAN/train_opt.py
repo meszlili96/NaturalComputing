@@ -6,12 +6,24 @@ import numpy as np
 from parser import Parser
 from model import ToyModel, CelebModel
 
-# Samples noise from unifrom distribution for Generator
+"""To define a new GAN create generator and discriminator NNs with architecture you need and define
+   a subclass of Model object in model.py file returnes these NNs. Implement other methods appropriately.
+   Then, create a shell script with GAN parameters. Change the model to use in main function.
+"""
+
+"""Samples noise from unifrom distribution for Generator
+"""
 def sample_noise(size):
     noise = -1 * torch.rand(size, 2) + 0.5
     return noise
 
 
+"""Performs discriminator training step on a batch of real and fake samples
+   Parameters:
+       model - an instance of Model class which defines GAN objects
+       fake_sample - a batch of generated samples
+       real_sample - a batch of real samples
+"""
 def train_discriminator(model, fake_sample, real_sample):
     model.d_optimizer.zero_grad()
     real_prediction = model.discriminator(real_sample)
@@ -26,6 +38,11 @@ def train_discriminator(model, fake_sample, real_sample):
     return full_loss.item(), real_prediction, fake_prediction
 
 
+"""Performs generator training step on a batch of real and fake samples
+   Parameters:
+       model - an instance of Model class which defines GAN objects
+       fake_sample - a batch of generated samples
+"""
 def train_generator(model, fake_sample):
     model.g_optimizer.zero_grad()
     # Since we just updated D, perform another forward pass of all-fake batch through D
@@ -39,8 +56,9 @@ def train_generator(model, fake_sample):
     return g_loss.item(), d_output
 
 
-if __name__ == '__main__':
+def main():
     opt = Parser().parse()
+    # Set up your model here
     model = ToyModel(opt)
 
     # Create batch of latent vectors that we will use to visualize the progression of the generator
@@ -48,7 +66,7 @@ if __name__ == '__main__':
     num_epochs = opt.num_epochs
     results_folder = "../results/"
     print("Starting Training Loop...")
-    steps_per_epoch = int(np.floor(len(model.dataset)/opt.batch_size))
+    steps_per_epoch = int(np.floor(len(model.dataset) / opt.batch_size))
     iter = 0
     for epoch in range(num_epochs):
         # For each batch in the dataloader
@@ -79,16 +97,16 @@ if __name__ == '__main__':
             # mean of discriminator prediction for fake sample after discriminator was trained,
             if iter % 100 == 0:
                 print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
-                % (epoch, num_epochs, iter, steps_per_epoch,
-                d_loss, g_loss, real_out.mean().item(), fake_out.mean().item(), fake_out2.mean().item()))
-
+                      % (epoch, num_epochs, iter, steps_per_epoch,
+                         d_loss, g_loss, real_out.mean().item(), fake_out.mean().item(), fake_out2.mean().item()))
 
         # Check how the generator is doing by saving G's output on fixed_noise
         # I moved it to the end of epoch, but it can be done based on iter value too
         with torch.no_grad():
             fake = model.generator(fixed_noise)
         fake_shape = fake.shape
-        model.save_gen_sample(fake.reshape((fake_shape[0], fake_shape[2])).numpy(), "{}epoch {}.png".format(results_folder, epoch + 1))
+        model.save_gen_sample(fake.reshape((fake_shape[0], fake_shape[2])).numpy(),
+                              "{}epoch {}.png".format(results_folder, epoch + 1))
 
     plt.figure(figsize=(10, 5))
     plt.title("Generator and Discriminator Loss During Training")
@@ -98,3 +116,7 @@ if __name__ == '__main__':
     plt.ylabel("Loss")
     plt.legend()
     plt.savefig("{}train_summary.png".format(results_folder))
+
+
+if __name__ == '__main__':
+    main()

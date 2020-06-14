@@ -1,4 +1,4 @@
-python3.7 ../train.py \
+python3.7 ../train_opt.py \
 --dataroot celeba \
 --workers 2 \
 --batch_size 128 \

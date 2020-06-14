@@ -7,8 +7,21 @@ from gen_losses import *
 from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, save_sample
 from discr_loss import DiscriminatorLoss
 
-# Model abstract class is a formal protocol, which defines the objects used in GAN training
-# It could be not very Pythonish, but it is the best way I came up with so far
+"""
+Model abstract class is a formal protocol, which defines the objects used in GAN training
+Properties:
+    discriminator - a discriminator NN
+    generator - a generator NN
+    d_loss - a discriminator loss function
+    g_loss - a generator loss function
+    d_optimizer - a discriminator optimizer
+    g_optimizer - a generator optimizer. Note: both use Adam with the parameters from options now.
+                  To change this the class should be redesigned
+    dataset - a dataset to train on
+    d_losses - a Python array to track discriminator loss statistics
+    g_losses - a Python array to track generator loss statistics
+It could be not very Pythonish, but it is the best way I came up with so far
+"""
 class Model():
     __metaclass__ = ABCMeta
     def __init__(self, opt):
@@ -39,30 +52,48 @@ class Model():
 
         self.dataset = self.create_dataset()
 
+
+    # Subclasses should implement the methods below and return the corresponding objects
+    """Defines and returns discriminator NN, torch.nn.Module object
+    """
     @abstractmethod
     def create_discriminator(self):
         raise NotImplementedError
 
+    """Defines and returns generator NN, torch.nn.Module object
+    """
     @abstractmethod
     def create_generator(self):
         raise NotImplementedError
 
+    """Defines and returns discriminator loss function, torch.nn.Module object
+    """
     @abstractmethod
     def create_d_loss(self):
         raise NotImplementedError
 
+    """Defines and returns generator loss function, torch.nn.Module object
+    """
     @abstractmethod
     def create_g_loss(self):
         raise NotImplementedError
 
+    """Defines and returns function that initializes NN weights
+    """
     @abstractmethod
     def weights_init_func(self):
         raise NotImplementedError
 
+    """Defines and a dataset to train on
+    """
     @abstractmethod
     def create_dataset(self):
         raise NotImplementedError
 
+    """Saves a generated sample at a specified path
+       Parameters:
+          path - where to save a sample
+    """
     @abstractmethod
     def save_gen_sample_func(self, path):
         raise NotImplementedError

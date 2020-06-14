@@ -1,10 +1,6 @@
-python3.7 ../train.py \
+python3.7 ../train_opt.py \
 --workers 1 \
 --batch_size 100 \
---nc 3 \
---nz 100 \
---ngf 64 \
---ndf 64 \
 --num_epochs 30 \
 --lr 0.001 \
 --beta1 0.5 \
