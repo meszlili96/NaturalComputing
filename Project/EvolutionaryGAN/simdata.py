@@ -16,20 +16,26 @@ class SimulatedDistribution(Enum):
     standard_gaussian = 3
 
 class MixtureOfGaussiansDataset(IterableDataset):
-    def __init__(self, distribution: SimulatedDistribution):
+    def __init__(self, distribution: SimulatedDistribution, length=None):
         super(MixtureOfGaussiansDataset).__init__()
         if distribution == SimulatedDistribution.eight_gaussians:
-            self.mixture_of_gaussians = EightInCircle()
+            self.mixture_of_gaussians = EightInCircle(length=length)
         elif distribution == SimulatedDistribution.twenty_five_gaussians:
-            self.mixture_of_gaussians = Grid()
+            self.mixture_of_gaussians = Grid(length=length)
         elif distribution == SimulatedDistribution.standard_gaussian:
-            self.mixture_of_gaussians = StandardGaussian(stdev=1)
+            self.mixture_of_gaussians = StandardGaussian(stdev=1, length=length)
         else:
             raise ValueError
 
+        self.data_generator = self.mixture_of_gaussians.data_generator()
+        self.length = length
+
     def __iter__(self):
         # TODO: not sure yet if we need to adopt it for workers. All samples are independent
-        return self.mixture_of_gaussians.data_generator()
+        return self.data_generator
+
+    def __len__(self):
+        return self.length
 
 
 # extracts arrays of x and y from point in sample
@@ -53,9 +59,10 @@ class MixtureOfGaussians:
     # stdev - standard deviation of each Gaussian. All Gaussians have the same standard deviation
     # scale - when equals 1, the Gaussians centers are placed inside [-1,1] unit square
     #         other values will scale the square accordingly
-    def __init__(self, stdev=0.2, scale=1.):
+    def __init__(self, stdev=0.2, scale=1., length=None):
         self.__stdev = stdev
         self.scale = scale
+        self.length = length
 
     # the mixture of Gaussians is defined by number of Gaussians and locations of their centers
     # subclassed have to implement this method and provide the coordinates
@@ -77,8 +84,14 @@ class MixtureOfGaussians:
 
     # generate a stream of data in batches
     def data_generator(self, batch_size=1):
-        while True:
-            yield self.sample(batch_size)
+        if self.length is not None:
+            yielded = 0
+            while yielded < self.length:
+                yielded += 1
+                yield self.sample(batch_size)
+        else:
+            while True:
+                yield self.sample(batch_size)
 
     # returns (x, y) grid and PDF
     # unit_grid_size - the number of points in a unit (i.e. in [0,1] interval)
@@ -155,8 +168,8 @@ class EightInCircle(MixtureOfGaussians):
 # evenly spaced squared grid of Gaussians
 class Grid(MixtureOfGaussians):
     # size - the number of Gaussians per row and column
-    def __init__(self, stdev=0.2, scale=1., size=5):
-        super().__init__(stdev, scale)
+    def __init__(self, stdev=0.2, scale=1., size=5,length=None):
+        super().__init__(stdev, scale, length)
         self.__size = size
 
     def centers(self):
@@ -169,8 +182,8 @@ class Grid(MixtureOfGaussians):
 
 # evenly spaced squared grid of Gaussians
 class StandardGaussian(MixtureOfGaussians):
-    def __init__(self, stdev=0.2, scale=1., center=(0, 0)):
-        super().__init__(stdev, scale)
+    def __init__(self, stdev=0.2, scale=1., center=(0, 0), length=None):
+        super().__init__(stdev, scale, length)
         self.__center = center
 
     def centers(self):
@@ -179,9 +192,10 @@ class StandardGaussian(MixtureOfGaussians):
 
 def main():
     # Demonstration of data generation
-    iterable_dataset = MixtureOfGaussiansDataset(SimulatedDistribution.standard_gaussian)
+    batch_size = 4
+    iterable_dataset = MixtureOfGaussiansDataset(SimulatedDistribution.standard_gaussian, length=8 * batch_size)
     data_loader = DataLoader(iterable_dataset, batch_size=4)
-    for batch in islice(data_loader, 8):
+    for n_batch, batch in enumerate(data_loader):
         print(batch)
 
     # Demonstration of distributions 2d PDFs and 10 000 samples
