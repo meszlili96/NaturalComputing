@@ -9,5 +9,6 @@ python3.7 ../train_opt.py \
 --toy_type 1 \
 --toy_std 0.2 \
 --toy_scale 1.0 \
---toy_len 100000
+--toy_len 100000 \
+--g_loss 1
 
