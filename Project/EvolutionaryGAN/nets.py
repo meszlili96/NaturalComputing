@@ -1,7 +1,4 @@
-import torch
 import torch.nn as nn
-
-from parser import Parser
 
 class Generator(nn.Module):
     def __init__(self, ngpu, nc, nz, ngf):

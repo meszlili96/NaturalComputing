@@ -1,6 +1,3 @@
-import numpy as np
-import torch
-import torch.nn as nn
 from discr_loss import DiscriminatorLoss
 from simdata import *
 

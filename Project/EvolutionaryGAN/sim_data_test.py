@@ -1,6 +1,5 @@
 from simdata import *
 import torch
-import torch.nn as nn
 from discr_loss import DiscriminatorLoss
 from gen_losses import Minmax, Heuristic, LeastSquares
 import matplotlib.pyplot as plt

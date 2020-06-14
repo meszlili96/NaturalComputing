@@ -7,7 +7,7 @@ from parser import Parser
 from gan import ToyGAN, CelebGAN
 
 """To define a new GAN create generator and discriminator NNs with architecture you need and define
-   a subclass of GAN object in gan.py file returnes these NNs. Implement other methods appropriately.
+   a subclass of GAN object in gan.py file to return these NNs. Implement other methods appropriately.
    Then, create a shell script with GAN parameters. Change the model to use in main function.
 """
 

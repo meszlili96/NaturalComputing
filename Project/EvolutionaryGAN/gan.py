@@ -1,5 +1,3 @@
-from abc import ABCMeta, abstractmethod
-from enum import Enum
 import torch.optim as optim
 from nets import *
 from data import *
