@@ -4,10 +4,10 @@ import torchvision.utils as vutils
 import numpy as np
 
 from parser import Parser
-from model import ToyModel, CelebModel
+from gan import ToyGAN, CelebGAN
 
 """To define a new GAN create generator and discriminator NNs with architecture you need and define
-   a subclass of Model object in model.py file returnes these NNs. Implement other methods appropriately.
+   a subclass of GAN object in gan.py file returnes these NNs. Implement other methods appropriately.
    Then, create a shell script with GAN parameters. Change the model to use in main function.
 """
 
@@ -59,7 +59,7 @@ def train_generator(model, fake_sample):
 def main():
     opt = Parser().parse()
     # Set up your model here
-    model = ToyModel(opt)
+    model = ToyGAN(opt)
 
     # Create batch of latent vectors that we will use to visualize the progression of the generator
     fixed_noise = sample_noise(10000)

@@ -8,7 +8,7 @@ from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, save_sample
 from discr_loss import DiscriminatorLoss
 
 """
-Model abstract class is a formal protocol, which defines the objects used in GAN training
+GAN abstract class is a formal protocol, which defines the objects used in GAN training
 Properties:
     discriminator - a discriminator NN
     generator - a generator NN
@@ -22,7 +22,7 @@ Properties:
     g_losses - a Python array to track generator loss statistics
 It could be not very Pythonish, but it is the best way I came up with so far
 """
-class Model():
+class GAN():
     __metaclass__ = ABCMeta
     def __init__(self, opt):
         self.opt = opt
@@ -99,7 +99,7 @@ class Model():
         raise NotImplementedError
 
 
-class ToyModel(Model):
+class ToyGAN(GAN):
     def create_discriminator(self):
         return ToyDiscriminator()
 
@@ -122,7 +122,7 @@ class ToyModel(Model):
         save_sample(sample, path)
 
 
-class CelebModel(Model):
+class CelebGAN(GAN):
     def __init__(self, opt):
         super().__init__(opt)
         self.img_list = []
