@@ -4,6 +4,8 @@ import torchvision.utils as vutils
 import numpy as np
 from gan import ToyGAN, CelebGAN, ToyOptions, CelebOptions
 
+from torch.utils.tensorboard import SummaryWriter
+
 """To define a new GAN create generator and discriminator NNs with architecture you need and define
    a subclass of GAN object in gan.py file to return these NNs. Implement other methods appropriately.
    Then, create a shell script with GAN parameters. Change the model to use in main function.
@@ -69,7 +71,7 @@ def train_generator(gan, fake_sample):
                 device - torch.device object
             and other GAN specific properties
 """
-def train_gan(gan, opt):
+def train_gan(gan, opt, writer):
     # Create batch of latent vectors that we will use to visualize the progression of the generator
     fixed_noise = sample_noise(10000)
     num_epochs = opt.num_epochs
@@ -116,6 +118,8 @@ def train_gan(gan, opt):
         fake_shape = fake.shape
         gan.save_gen_sample(fake.reshape((fake_shape[0], fake_shape[2])).numpy(),
                             "{}epoch {}.png".format(results_folder, epoch + 1))
+        #gan.write_to_writer(fake.reshape((fake_shape[0], fake_shape[2])).numpy(),
+        #                    "epoch {}".format(epoch+1), writer, epoch)
 
     plt.figure(figsize=(10, 5))
     plt.title("Generator and Discriminator Loss During Training")
@@ -132,7 +136,10 @@ def main():
     opt = ToyOptions()
     # Set up your model here
     gan = ToyGAN(opt)
-    train_gan(gan, opt)
+    # Set up write for tracking training progress
+    writer = SummaryWriter('runs/test')
+
+    train_gan(gan, opt, writer)
 
 if __name__ == '__main__':
     main()

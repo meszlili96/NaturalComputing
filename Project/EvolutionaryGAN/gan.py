@@ -2,7 +2,7 @@ import torch.optim as optim
 from nets import *
 from data import *
 from gen_losses import *
-from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, save_sample
+from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, save_sample, extract_xy
 from discr_loss import DiscriminatorLoss
 
 
@@ -152,6 +152,12 @@ class ToyGAN(GAN):
 
     def save_gen_sample(self, sample, path):
         save_sample(sample, path)
+    
+    def write_to_writer(self, sample, title, writer, epoch):
+        x, y = extract_xy(sample)
+        fig = plt.figure()
+        fig.scatter(x, y, s=1.5)
+        writer.add_figure(title, fig, global_step=epoch)
 
 
 class CelebGAN(GAN):
