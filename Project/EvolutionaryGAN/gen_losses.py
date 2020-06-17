@@ -1,8 +1,14 @@
 import numpy as np
 import torch
 import torch.nn as nn
+from enum import Enum
 from abc import ABCMeta, abstractmethod
 import matplotlib.pyplot as plt
+
+class GenLossType(Enum):
+    minMax = 1
+    heuristic = 2
+    least_squares = 3
 
 # Abstract class to define custom loss functions for Generator
 # call returns Generator loss on Discriminator output for fake samples
