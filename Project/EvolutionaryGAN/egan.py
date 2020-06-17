@@ -1,64 +1,39 @@
+import copy
 import torch.optim as optim
-from nets import *
 from data import *
 from utils import *
 from gen_losses import *
-from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, save_sample, extract_xy
+from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, save_sample
 from discr_loss import DiscriminatorLoss
+from fitness_function import egan_fitness
 
 
-class Options():
+class EGANOptions():
     def __init__(self, ngpu=0):
         self.num_epochs = 32
         self.ngpu = 0
         self.lr = 1e-03
         self.beta1 = 0.5
         self.beta2 = 0.999
-        self.g_loss = 1
-        self.batch_size = 100
+        self.batch_size = 50
         self.workers = 1
         self.device = torch.device("cuda:0" if (torch.cuda.is_available() and self.ngpu > 0) else "cpu")
 
 
-class ToyOptions(Options):
+class ToyEGANOptions(EGANOptions):
     def __init__(self, ngpu=0):
         super().__init__(ngpu=ngpu)
         self.toy_type = 1
         self.toy_std = 0.2
         self.toy_scale = 1.0
-        self.toy_len = 100000
+        self.toy_len = 10000
 
 
-class CelebOptions(Options):
-    def __init__(self, ngpu=0):
-        super().__init__(ngpu=ngpu)
-        self.nc = 3
-        self.ndf = 64
-        self.ngf = 64
-        self.nz = 100
-        self.image_size = 64
-        self.dataroot = "celeba"
-
-
-"""
-GAN abstract class is a formal protocol, which defines the objects used in GAN training
-Properties:
-    discriminator - a discriminator NN
-    generator - a generator NN
-    d_loss - a discriminator loss function
-    g_loss - a generator loss function
-    d_optimizer - a discriminator optimizer
-    g_optimizer - a generator optimizer. Note: both use Adam with the parameters from options now.
-                  To change this the class should be redesigned
-    dataset - a dataset to train on
-    d_losses - a Python array to track discriminator loss statistics
-    g_losses - a Python array to track generator loss statistics
-It could be not very Pythonish, but it is the best way I came up with so far
-"""
-class GAN():
+class EGAN():
     __metaclass__ = ABCMeta
     def __init__(self, opt):
         self.opt = opt
+        self.gamma = 0.5
         self.discriminator = self.create_discriminator()
         self.generator = self.create_generator()
 
@@ -74,14 +49,26 @@ class GAN():
         # Lists to keep track of progress
         self.d_losses = []
         self.g_losses = []
+        # Types of selected generator losses for each training step
+        self.selected_g_loss = []
 
-        # Initialize Discriminator and generator loss functions
+        # Initialize Discriminator loss functions
         self.d_loss = self.create_d_loss()
-        self.g_loss = self.create_g_loss()
+        # Initialize Generator loss functions (mutations)
+        self.g_losses_list = [Minmax(), Heuristic(), LeastSquares()]
 
         # Setup Adam optimizers for both G and D
         self.d_optimizer = optim.Adam(self.discriminator.parameters(), lr=opt.lr, betas=(opt.beta1, opt.beta2))
         self.g_optimizer = optim.Adam(self.generator.parameters(), lr=opt.lr, betas=(opt.beta1, opt.beta2))
+
+        # Evolutinoary candidatures setting (init)
+        self.g_cands = []
+        self.opt_g_cands = []
+        candi_num = len(self.g_losses_list)
+        for i in range(candi_num):
+            # We probably want to copy the weights here
+            self.g_cands.append(copy.deepcopy(self.generator.state_dict()))
+            self.opt_g_cands.append(copy.deepcopy(self.g_optimizer.state_dict()))
 
         self.dataset = self.create_dataset()
 
@@ -103,18 +90,6 @@ class GAN():
     """
     def create_d_loss(self):
         return DiscriminatorLoss()
-
-    """Defines and returns generator loss function, torch.nn.Module object
-    """
-    def create_g_loss(self):
-        if self.opt.g_loss == 1:
-            return Minmax()
-        elif self.opt.g_loss == 2:
-            return Heuristic()
-        elif self.opt.g_loss == 3:
-            return LeastSquares()
-        else:
-            raise ValueError
 
     """Defines and returns function that initializes NN weights
     """
@@ -162,19 +137,19 @@ class GAN():
            fake_sample - a batch of generated samples
     """
 
-    def train_generator(self, fake_sample):
+    def train_generator(self, loss, fake_sample):
         self.g_optimizer.zero_grad()
         # Since we just updated D, perform another forward pass of all-fake batch through D
         d_output = self.discriminator(fake_sample).view(-1)
         # Calculate G's loss based on this output
-        g_loss = self.g_loss(d_output)
+        g_loss = loss(d_output)
         # Calculate gradients for G
         g_loss.backward()
         # Update G
         self.g_optimizer.step()
         return g_loss.item(), d_output
 
-    def train(self, results_folder, writer):
+    def train(self, results_folder):
         fixed_noise = sample_noise(10000)
         num_epochs = self.opt.num_epochs
         print("Starting Training Loop...")
@@ -194,10 +169,40 @@ class GAN():
                 ############################
                 # (2) Update Generator network
                 ###########################
-                fake_sample = self.generator(sample_noise(self.opt.batch_size))
+                # Fitness scores for each mutation
+                F_scores = []
+                # To save trained generators and their optimizers
+                g_list = []
+                opt_g_list = []
+                cand_losses_list = []
+                for index, loss in enumerate(self.g_losses_list):
+                        # Copy the parameters of candidate generator and generator's optimiser
+                        self.generator.load_state_dict(self.g_cands[index])
+                        self.g_optimizer.load_state_dict(self.opt_g_cands[index])
+                        # Generate fake samples
+                        fake_sample = self.generator(sample_noise(self.opt.batch_size))
+                        # Train the current generator
+                        g_loss, fake_out2 = self.train_generator(loss, fake_sample)
+                        cand_losses_list.append(g_loss)
 
-                g_loss, fake_out2 = self.train_generator(fake_sample)
-                self.g_losses.append(g_loss)
+                        # Compute fitness score on a sample after training
+                        fake_sample_trained = self.generator(sample_noise(self.opt.batch_size))
+                        f_q, f_d = egan_fitness(self.discriminator, self.d_loss, fake_sample_trained, real_sample.float())
+                        fitness_score = f_q + self.gamma*f_d
+                        F_scores.append(fitness_score)
+
+                        # Save an individual
+                        g_list.append(copy.deepcopy(self.generator.state_dict()))
+                        opt_g_list.append(copy.deepcopy(self.g_optimizer.state_dict()))
+
+                # Select best individual based on fitness score
+                best_individual_index = F_scores.index(max(F_scores))
+                self.selected_g_loss.append(GenLossType(best_individual_index+1))
+                # Load its weights to generator
+                self.generator.load_state_dict(self.g_cands[best_individual_index])
+                self.g_optimizer.load_state_dict(self.opt_g_cands[best_individual_index])
+                self.g_losses.append(cand_losses_list[best_individual_index])
+
                 # Output training stats
                 iter += 1
 
@@ -206,9 +211,9 @@ class GAN():
                 # mean of discriminator prediction for fake sample before discriminator was trained,
                 # mean of discriminator prediction for fake sample after discriminator was trained,
                 if iter % 100 == 0:
-                    print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
+                    print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f'
                           % (epoch, num_epochs, iter, steps_per_epoch,
-                             d_loss, g_loss, real_out.mean().item(), fake_out.mean().item(), fake_out2.mean().item()))
+                             d_loss, g_loss, real_out.mean().item(), fake_out.mean().item()))
 
             # Check how the generator is doing by saving G's output on fixed_noise
             # I moved it to the end of epoch, but it can be done based on iter value too
@@ -216,7 +221,7 @@ class GAN():
                 fake = self.generator(fixed_noise)
             fake_shape = fake.shape
             self.save_gen_sample(fake.reshape((fake_shape[0], fake_shape[2])).numpy(),
-                                "{}epoch {}.png".format(results_folder, epoch + 1))
+                                 "{}epoch {}.png".format(results_folder, epoch + 1))
             # gan.write_to_writer(fake.reshape((fake_shape[0], fake_shape[2])).numpy(),
             #                    "epoch {}".format(epoch+1), writer, epoch)
 
@@ -230,7 +235,7 @@ class GAN():
         plt.savefig("{}train_summary.png".format(results_folder))
 
 
-class ToyGAN(GAN):
+class ToyEGAN(EGAN):
     def create_discriminator(self):
         return ToyDiscriminator()
 
@@ -245,33 +250,16 @@ class ToyGAN(GAN):
 
     def save_gen_sample(self, sample, path):
         save_sample(sample, path)
-    
-    def write_to_writer(self, sample, title, writer, epoch):
-        x, y = extract_xy(sample)
-        fig = plt.figure()
-        fig.scatter(x, y, s=1.5)
-        writer.add_figure(title, fig, global_step=epoch)
 
 
-class CelebGAN(GAN):
-    def __init__(self, opt):
-        super().__init__(opt)
-        self.img_list = []
+def main():
+    results_folder = "results/"
+    # Change the default parameters if needed
+    opt = ToyEGANOptions()
+    # Set up your model here
+    gan = ToyEGAN(opt)
+    gan.train(results_folder)
 
-    def create_discriminator(self):
-        return Discriminator(self.opt.ngpu, self.opt.nc, self.opt.ndf).to(self.opt.device)
 
-    def create_generator(self):
-        return Generator(self.opt.ngpu, self.opt.nc, self.opt.nz, self.opt.ngf).to(self.opt.device)
-
-    def weights_init_func(self):
-        return weights_init_celeb
-
-    def create_dataset(self):
-        return image_dataset(self.opt)
-
-    def save_gen_sample(self, sample, path):
-        plt.figure()
-        plt.imshow(sample)
-        plt.savefig(path)
-        plt.close()
+if __name__ == '__main__':
+    main()
