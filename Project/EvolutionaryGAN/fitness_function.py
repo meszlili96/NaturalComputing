@@ -44,7 +44,7 @@ def egan_fitness(discriminator, criterion, fake_samples, real_samples, device="c
             allgrad = grad if i == 0 else torch.cat([allgrad, grad])
 
     # - log norm computation
-    f_d = -torch.log(torch.norm(allgrad)).data.cpu().numpy()
+    f_d = torch.log(torch.norm(allgrad)).data.cpu().numpy()
     return f_q, f_d
 
 

@@ -139,6 +139,10 @@ class EGAN():
 
     def train_generator(self, loss, fake_sample):
         self.g_optimizer.zero_grad()
+
+        for param in self.discriminator.parameters():
+            param.requires_grad = False
+
         # Since we just updated D, perform another forward pass of all-fake batch through D
         d_output = self.discriminator(fake_sample).view(-1)
         # Calculate G's loss based on this output
@@ -161,6 +165,8 @@ class EGAN():
                 ############################
                 # (1) Update Discriminator network
                 ###########################
+                for param in self.discriminator.parameters():
+                    param.requires_grad = True
                 fake_sample = self.generator(sample_noise(self.opt.batch_size)).detach()
                 d_loss, real_out, fake_out = self.train_discriminator(fake_sample,
                                                                       real_sample.float())
@@ -186,7 +192,8 @@ class EGAN():
                         cand_losses_list.append(g_loss)
 
                         # Compute fitness score on a sample after training
-                        fake_sample_trained = self.generator(sample_noise(self.opt.batch_size))
+                        with torch.no_grad():
+                            fake_sample_trained = self.generator(sample_noise(self.opt.batch_size))
                         f_q, f_d = egan_fitness(self.discriminator, self.d_loss, fake_sample_trained, real_sample.float())
                         fitness_score = f_q + self.gamma*f_d
                         F_scores.append(fitness_score)
@@ -216,7 +223,7 @@ class EGAN():
                 if iter % 100 == 0:
                     print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f'
                           % (epoch, num_epochs, iter, steps_per_epoch,
-                             d_loss, g_loss, real_out.mean().item(), fake_out.mean().item()))
+                             d_loss, self.g_losses[-1], real_out.mean().item(), fake_out.mean().item()))
 
             # Check how the generator is doing by saving G's output on fixed_noise
             # I moved it to the end of epoch, but it can be done based on iter value too
