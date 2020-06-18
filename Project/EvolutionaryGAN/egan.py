@@ -154,8 +154,8 @@ class EGAN():
         num_epochs = self.opt.num_epochs
         print("Starting Training Loop...")
         steps_per_epoch = int(np.floor(len(self.dataset) / self.opt.batch_size))
-        iter = 0
         for epoch in range(num_epochs):
+            iter = 0
             # For each batch in the dataloader
             for i, real_sample in enumerate(self.dataset, 0):
                 ############################
@@ -199,9 +199,12 @@ class EGAN():
                 best_individual_index = F_scores.index(max(F_scores))
                 self.selected_g_loss.append(GenLossType(best_individual_index+1))
                 # Load its weights to generator
-                self.generator.load_state_dict(self.g_cands[best_individual_index])
-                self.g_optimizer.load_state_dict(self.opt_g_cands[best_individual_index])
+                self.generator.load_state_dict(g_list[best_individual_index])
+                self.g_optimizer.load_state_dict(opt_g_list[best_individual_index])
                 self.g_losses.append(cand_losses_list[best_individual_index])
+
+                self.g_cands = copy.deepcopy(g_list)
+                self.opt_g_cands = copy.deepcopy(opt_g_list)
 
                 # Output training stats
                 iter += 1

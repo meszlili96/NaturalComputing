@@ -179,9 +179,9 @@ class GAN():
         num_epochs = self.opt.num_epochs
         print("Starting Training Loop...")
         steps_per_epoch = int(np.floor(len(self.dataset) / self.opt.batch_size))
-        iter = 0
         for epoch in range(num_epochs):
             # For each batch in the dataloader
+            iter = 0
             for i, real_sample in enumerate(self.dataset, 0):
                 ############################
                 # (1) Update Discriminator network
