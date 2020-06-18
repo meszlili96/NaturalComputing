@@ -3,19 +3,19 @@ from nets import *
 from data import *
 from utils import *
 from gen_losses import *
-from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, save_sample, extract_xy
+from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, save_sample, extract_xy, EightInCircle, Grid, StandardGaussian
 from discr_loss import DiscriminatorLoss
 
 
 class Options():
     def __init__(self, ngpu=0):
-        self.num_epochs = 32
+        self.num_epochs = 50
         self.ngpu = 0
         self.lr = 1e-03
         self.beta1 = 0.5
         self.beta2 = 0.999
-        self.g_loss = 1
-        self.batch_size = 100
+        self.g_loss = 3
+        self.batch_size = 64
         self.workers = 1
         self.device = torch.device("cuda:0" if (torch.cuda.is_available() and self.ngpu > 0) else "cpu")
 
@@ -25,8 +25,8 @@ class ToyOptions(Options):
         super().__init__(ngpu=ngpu)
         self.toy_type = 1
         self.toy_std = 0.2
-        self.toy_scale = 1.0
-        self.toy_len = 100000
+        self.toy_scale = 2.0
+        self.toy_len = 100*self.batch_size
 
 
 class CelebOptions(Options):
@@ -220,6 +220,12 @@ class GAN():
             # gan.write_to_writer(fake.reshape((fake_shape[0], fake_shape[2])).numpy(),
             #                    "epoch {}".format(epoch+1), writer, epoch)
 
+        # Save generator's sample KDE at the end of training
+        fake_shape = fake.shape
+        fake = self.generator(fixed_noise).reshape((fake_shape[0], fake_shape[2])).detach().numpy()
+        # will fail for image GAN
+        save_kde(fake, self.target_distr(), results_folder)
+
         plt.figure(figsize=(10, 5))
         plt.title("Generator and Discriminator Loss During Training")
         plt.plot(self.g_losses, label="G")
@@ -251,6 +257,18 @@ class ToyGAN(GAN):
         fig = plt.figure()
         fig.scatter(x, y, s=1.5)
         writer.add_figure(title, fig, global_step=epoch)
+
+    # For KDE plot. A better way to do it might exist but I haven't found one
+    def target_distr(self):
+        distribution = SimulatedDistribution(self.opt.toy_type)
+        if distribution == SimulatedDistribution.eight_gaussians:
+            return EightInCircle(stdev=self.opt.toy_std, scale=self.opt.toy_scale)
+        elif distribution == SimulatedDistribution.twenty_five_gaussians:
+            return Grid(stdev=self.opt.toy_std, scale=self.opt.toy_scale)
+        elif distribution == SimulatedDistribution.standard_gaussian:
+            return StandardGaussian(stdev=self.opt.toy_std, scale=self.opt.toy_scale)
+        else:
+            raise ValueError
 
 
 class CelebGAN(GAN):

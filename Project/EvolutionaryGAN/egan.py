@@ -3,19 +3,19 @@ import torch.optim as optim
 from data import *
 from utils import *
 from gen_losses import *
-from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, save_sample
+from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, save_sample, EightInCircle, Grid, StandardGaussian
 from discr_loss import DiscriminatorLoss
 from fitness_function import egan_fitness
 
 
 class EGANOptions():
     def __init__(self, ngpu=0):
-        self.num_epochs = 32
+        self.num_epochs = 50
         self.ngpu = 0
         self.lr = 1e-03
         self.beta1 = 0.5
         self.beta2 = 0.999
-        self.batch_size = 50
+        self.batch_size = 100
         self.workers = 1
         self.device = torch.device("cuda:0" if (torch.cuda.is_available() and self.ngpu > 0) else "cpu")
 
@@ -25,8 +25,8 @@ class ToyEGANOptions(EGANOptions):
         super().__init__(ngpu=ngpu)
         self.toy_type = 1
         self.toy_std = 0.2
-        self.toy_scale = 1.0
-        self.toy_len = 10000
+        self.toy_scale = 2.0
+        self.toy_len = 100*self.batch_size
 
 
 class EGAN():
@@ -197,7 +197,7 @@ class EGAN():
 
                 # Select best individual based on fitness score
                 best_individual_index = F_scores.index(max(F_scores))
-                self.selected_g_loss.append(GenLossType(best_individual_index+1))
+                self.selected_g_loss.append(best_individual_index+1)
                 # Load its weights to generator
                 self.generator.load_state_dict(g_list[best_individual_index])
                 self.g_optimizer.load_state_dict(opt_g_list[best_individual_index])
@@ -228,6 +228,13 @@ class EGAN():
             # gan.write_to_writer(fake.reshape((fake_shape[0], fake_shape[2])).numpy(),
             #                    "epoch {}".format(epoch+1), writer, epoch)
 
+        # Save generator's sample KDE at the end of training
+        fake_shape = fake.shape
+        fake = self.generator(fixed_noise).reshape((fake_shape[0], fake_shape[2])).detach().numpy()
+        # will fail for image GAN
+        save_kde(fake, self.target_distr(), results_folder)
+
+        # Train statistics:
         plt.figure(figsize=(10, 5))
         plt.title("Generator and Discriminator Loss During Training")
         plt.plot(self.g_losses, label="G")
@@ -236,6 +243,9 @@ class EGAN():
         plt.ylabel("Loss")
         plt.legend()
         plt.savefig("{}train_summary.png".format(results_folder))
+
+        # Loss functions statistics:
+        selected_loss_stat(self.selected_g_loss, results_folder)
 
 
 class ToyEGAN(EGAN):
@@ -253,6 +263,43 @@ class ToyEGAN(EGAN):
 
     def save_gen_sample(self, sample, path):
         save_sample(sample, path)
+
+    # For KDE plot. A better way to do it might exist but I haven't found one
+    def target_distr(self):
+        distribution = SimulatedDistribution(self.opt.toy_type)
+        if distribution == SimulatedDistribution.eight_gaussians:
+            return EightInCircle(stdev=self.opt.toy_std, scale=self.opt.toy_scale)
+        elif distribution == SimulatedDistribution.twenty_five_gaussians:
+            return Grid(stdev=self.opt.toy_std, scale=self.opt.toy_scale)
+        elif distribution == SimulatedDistribution.standard_gaussian:
+            return StandardGaussian(stdev=self.opt.toy_std, scale=self.opt.toy_scale)
+        else:
+            raise ValueError
+
+
+def selected_loss_stat(selected_g_losses, results_folder):
+    selected_g_losses = np.array(selected_g_losses)
+    groups_num = 5
+    grouped_by_steps = np.split(selected_g_losses, groups_num)
+    minmax_counts = [(x == 1).sum() for x in grouped_by_steps]
+    heuristic_counts = [(x == 2).sum() for x in grouped_by_steps]
+    ls_counts = [(x == 3).sum() for x in grouped_by_steps]
+
+    ind = np.arange(groups_num)  # the x locations for the groups
+    width = 0.25  # the width of the bars
+
+    fig, ax = plt.subplots()
+    _ = ax.bar(ind - width, minmax_counts, width, label='MinMax')
+    _ = ax.bar(ind, heuristic_counts, width, label='Heuristic')
+    _ = ax.bar(ind + width, ls_counts, width, label='Least Square')
+
+    ax.set_title('Selected mutations')
+    ax.set_xticks(ind)
+    ax.set_xticklabels(('0-2', '2-4', '4-6', '6-8', '8-10'))
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.08), ncol=3)
+    fig.tight_layout()
+    plt.savefig("{}selected_mutations_stats.png".format(results_folder))
+    plt.close()
 
 
 def main():
