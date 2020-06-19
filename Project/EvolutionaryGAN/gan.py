@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.optim as optim
 import torch.nn as nn
@@ -8,9 +9,9 @@ from abc import ABCMeta, abstractmethod
 from nets import DCGANGenerator, DCGANDiscriminator, weights_init_DCGAN, ToyGenerator, ToyDiscriminator, weighs_init_toy, WassersteinDiscriminator
 from data import toy_dataset, image_dataset
 from utils import sample_noise, save_kde
-from gen_losses import Minmax, Heuristic, LeastSquares
+from gen_losses import Minmax, Heuristic, LeastSquares, WassersteinGeneratorLoss
 from simdata import save_sample, extract_xy, EightInCircle, Grid, StandardGaussian, SimulatedDistribution
-from discr_loss import DiscriminatorLoss
+from discr_loss import DiscriminatorLoss, WassersteinDiscriminatorLoss
 
 
 class Options():
@@ -333,3 +334,16 @@ class DCGAN(GAN):
         plt.imshow(sample)
         plt.savefig(path)
         plt.close()
+
+class WGAN(GAN):
+    def create_d_loss(self):
+        return WassersteinDiscriminatorLoss()
+
+    def create_g_loss(self):
+        return WassersteinGeneratorLoss()
+
+    def create_discriminator(self):
+        return WassersteinDiscriminator(self.opt.ngpu, self.opt.nc, self.opt.nz, self.opt.ngf).to(self.opt.device)
+    
+    def create_generator(self):
+        return DCGANGenerator(self.opt.ngpu, self.opt.nc, self.opt.nz, self.opt.ngf).to(self.opt.device)
