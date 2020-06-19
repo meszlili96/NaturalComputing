@@ -1,6 +1,10 @@
 import copy
+import torch
 import torch.optim as optim
-from data import *
+import torch.nn as nn
+import numpy as np
+
+from data import toy_dataset
 from utils import *
 from gen_losses import *
 from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, save_sample, EightInCircle, Grid, StandardGaussian

@@ -1,9 +1,14 @@
-from simdata import *
 import torch
-from discr_loss import DiscriminatorLoss
-from gen_losses import Minmax, Heuristic, LeastSquares
-import matplotlib.pyplot as plt
 import torch.optim as optim
+import torch.utils.data as data
+import matplotlib.pyplot as plt
+from itertools import islice
+
+from simdata import MixtureOfGaussiansDataset, SimulatedDistribution, extract_xy
+from nets import ToyDiscriminator, ToyGenerator, weighs_init_toy
+from discr_loss import DiscriminatorLoss
+from gen_losses import Minmax
+
 
 
 def save_sample(sample, img_name):
@@ -59,7 +64,7 @@ def main():
 
     batch_size = 100
     iterable_dataset = MixtureOfGaussiansDataset(SimulatedDistribution.eight_gaussians)
-    data_loader = DataLoader(iterable_dataset, batch_size=batch_size)
+    data_loader = data.DataLoader(iterable_dataset, batch_size=batch_size)
 
     # Setup Adam optimizers for both G and D
     learning_rate = 1e-3

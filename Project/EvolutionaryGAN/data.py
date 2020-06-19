@@ -1,5 +1,5 @@
 import os
-import torch.utils.data
+from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 import torchvision.datasets as dset
 from simdata import SimulatedDistribution, MixtureOfGaussiansDataset
@@ -8,7 +8,7 @@ def toy_dataset(opt):
     dataset = MixtureOfGaussiansDataset(SimulatedDistribution(opt.toy_type), opt.toy_std, opt.toy_scale, opt.toy_len)
 
     # we do not want to shuffle data here, since we have random sampling
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=opt.batch_size, num_workers=opt.workers)
+    dataloader = DataLoader(dataset, batch_size=opt.batch_size, num_workers=opt.workers)
     return dataloader
 
 
@@ -24,6 +24,6 @@ def image_dataset(opt):
                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
                                ]))
     # Create the dataloader
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=opt.batch_size,
+    dataloader = DataLoader(dataset, batch_size=opt.batch_size,
                                              shuffle=True, num_workers=opt.workers)
     return dataloader

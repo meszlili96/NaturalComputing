@@ -1,9 +1,15 @@
+import torch
 import torch.optim as optim
-from nets import *
-from data import *
-from utils import *
-from gen_losses import *
-from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, save_sample, extract_xy, EightInCircle, Grid, StandardGaussian
+import torch.nn as nn
+import matplotlib.pyplot as plt
+import numpy as np
+from abc import ABCMeta, abstractmethod
+
+from nets import DCGANGenerator, DCGANDiscriminator, weights_init_DCGAN, ToyGenerator, ToyDiscriminator, weighs_init_toy, WassersteinDiscriminator
+from data import toy_dataset, image_dataset
+from utils import sample_noise, save_kde
+from gen_losses import Minmax, Heuristic, LeastSquares
+from simdata import save_sample, extract_xy, EightInCircle, Grid, StandardGaussian, SimulatedDistribution
 from discr_loss import DiscriminatorLoss
 
 
@@ -305,19 +311,19 @@ class ToyGAN(GAN):
             raise ValueError
 
 
-class CelebGAN(GAN):
+class DCGAN(GAN):
     def __init__(self, opt):
         super().__init__(opt)
         self.img_list = []
 
     def create_discriminator(self):
-        return Discriminator(self.opt.ngpu, self.opt.nc, self.opt.ndf).to(self.opt.device)
+        return DCGANDiscriminator(self.opt.ngpu, self.opt.nc, self.opt.ndf).to(self.opt.device)
 
     def create_generator(self):
-        return Generator(self.opt.ngpu, self.opt.nc, self.opt.nz, self.opt.ngf).to(self.opt.device)
+        return DCGANGenerator(self.opt.ngpu, self.opt.nc, self.opt.nz, self.opt.ngf).to(self.opt.device)
 
     def weights_init_func(self):
-        return weights_init_celeb
+        return weights_init_DCGAN
 
     def create_dataset(self):
         return image_dataset(self.opt)
