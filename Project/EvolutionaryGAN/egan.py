@@ -1,13 +1,16 @@
 import copy
+import os
 import torch
 import torch.optim as optim
 import torch.nn as nn
+from abc import ABCMeta, abstractmethod
 import numpy as np
+import matplotlib.pyplot as plt
 
 from data import toy_dataset
-from utils import *
-from gen_losses import *
-from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, save_sample, EightInCircle, Grid, StandardGaussian
+from utils import sample_noise, set_seed, save_kde
+from gen_losses import Minmax, Heuristic, LeastSquares
+from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, save_sample, EightInCircle, Grid, StandardGaussian, SimulatedDistribution
 from discr_loss import DiscriminatorLoss
 from fitness_function import egan_fitness
 
