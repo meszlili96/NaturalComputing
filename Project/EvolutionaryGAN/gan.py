@@ -218,7 +218,7 @@ class GAN():
                 # mean of discriminator prediction for fake sample after discriminator was trained,
                 if iter % 100 == 0:
                     print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
-                          % (epoch, num_epochs, iter, steps_per_epoch,
+                          % (epoch+1, num_epochs, iter, steps_per_epoch,
                              d_loss, g_loss, real_out.mean().item(), fake_out.mean().item(), fake_out2.mean().item()))
 
             # save fake sample log likelihood
@@ -240,6 +240,10 @@ class GAN():
         fake = self.generator(fixed_noise).reshape((fake_shape[0], fake_shape[2])).detach().numpy()
         # will fail for image GAN
         save_kde(fake, self.target_distr(), results_folder)
+
+        # Save fake sample log likelihood in case we want to use it later
+        with open("{}fs_ll.npy".format(results_folder), 'wb') as f:
+            np.save(f, np.array(self.g_sample_loglike))
 
         # Save fake sample log likelihood plot
         plt.figure(figsize=(10, 5))

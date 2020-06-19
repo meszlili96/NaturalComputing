@@ -263,6 +263,10 @@ class EGAN():
         # TODO: will fail for image GAN
         save_kde(fake, self.target_distr(), results_folder)
 
+        # Save fake sample log likelihood in case we want to use it later
+        with open("{}fs_ll.npy".format(results_folder), 'wb') as f:
+            np.save(f, np.array(self.g_sample_loglike))
+
         # Save fake sample log likelihood plot
         plt.figure(figsize=(10, 5))
         plt.title("Fake sample log likelihood")
