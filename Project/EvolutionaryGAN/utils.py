@@ -36,4 +36,8 @@ def kde_cv(target_distr):
     print(grid.best_params_)
 
 
+def set_seed(seed=99):
+    torch.manual_seed(99)
+    np.random.seed(99)
+
 
