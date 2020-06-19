@@ -10,12 +10,12 @@ from fitness_function import egan_fitness
 
 class EGANOptions():
     def __init__(self, ngpu=0):
-        self.num_epochs = 50
+        self.num_epochs = 20
         self.ngpu = 0
         self.lr = 1e-03
         self.beta1 = 0.5
         self.beta2 = 0.999
-        self.batch_size = 100
+        self.batch_size = 50
         self.workers = 1
         self.device = torch.device("cuda:0" if (torch.cuda.is_available() and self.ngpu > 0) else "cpu")
 
@@ -26,7 +26,7 @@ class ToyEGANOptions(EGANOptions):
         self.toy_type = 1
         self.toy_std = 0.2
         self.toy_scale = 2.0
-        self.toy_len = 100*self.batch_size
+        self.toy_len = 50*self.batch_size
 
 
 class EGAN():
@@ -153,6 +153,12 @@ class EGAN():
         return g_loss.item(), d_output
 
     def train(self, results_folder):
+        # Create results directory
+        try:
+            os.mkdir(results_folder)
+        except FileExistsError:
+            pass
+
         fixed_noise = sample_noise(10000)
         fixed_noise_ll = sample_noise(500)
         num_epochs = self.opt.num_epochs
@@ -241,7 +247,7 @@ class EGAN():
                 # mean of discriminator prediction for real sample,
                 # mean of discriminator prediction for fake sample before discriminator was trained,
                 # mean of discriminator prediction for fake sample after discriminator was trained,
-                if iter % 100 == 0:
+                if iter % 50 == 0:
                     print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLast Loss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f/D(G(z)): %.4f'
                           % (epoch+1, num_epochs, iter, steps_per_epoch,
                              d_loss, self.g_losses[-1], real_out.mean().item(), fake_out.mean().item(), fake_out_2_mean))
@@ -344,9 +350,20 @@ def selected_loss_stat(selected_g_losses, results_folder):
 
 
 def main():
-    results_folder = "results/"
+    set_seed()
+    # 8 gaussians
+    results_folder = "8 gauss egan/"
     # Change the default parameters if needed
     opt = ToyEGANOptions()
+    # Set up your model here
+    gan = ToyEGAN(opt)
+    gan.train(results_folder)
+
+    # 25 gaussians
+    results_folder = "25 gauss egan/"
+    # Change the default parameters if needed
+    opt = ToyEGANOptions()
+    opt.toy_type = 2
     # Set up your model here
     gan = ToyEGAN(opt)
     gan.train(results_folder)

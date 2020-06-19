@@ -9,13 +9,13 @@ from discr_loss import DiscriminatorLoss
 
 class Options():
     def __init__(self, ngpu=0):
-        self.num_epochs = 50
+        self.num_epochs = 20
         self.ngpu = 0
         self.lr = 1e-03
         self.beta1 = 0.5
         self.beta2 = 0.999
-        self.g_loss = 3
-        self.batch_size = 64
+        self.g_loss = 1
+        self.batch_size = 50
         self.workers = 1
         self.device = torch.device("cuda:0" if (torch.cuda.is_available() and self.ngpu > 0) else "cpu")
 
@@ -26,7 +26,7 @@ class ToyOptions(Options):
         self.toy_type = 1
         self.toy_std = 0.2
         self.toy_scale = 2.0
-        self.toy_len = 100*self.batch_size
+        self.toy_len = 50*self.batch_size
 
 
 class CelebOptions(Options):
@@ -175,7 +175,13 @@ class GAN():
         self.g_optimizer.step()
         return g_loss.item(), d_output
 
-    def train(self, results_folder, writer):
+    def train(self, results_folder, writer=None):
+        # Create results directory
+        try:
+            os.mkdir(results_folder)
+        except FileExistsError:
+            pass
+
         fixed_noise = sample_noise(10000)
         fixed_noise_ll = sample_noise(500)
         num_epochs = self.opt.num_epochs
@@ -216,7 +222,7 @@ class GAN():
                 # mean of discriminator prediction for real sample,
                 # mean of discriminator prediction for fake sample before discriminator was trained,
                 # mean of discriminator prediction for fake sample after discriminator was trained,
-                if iter % 100 == 0:
+                if iter % 50 == 0:
                     print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
                           % (epoch+1, num_epochs, iter, steps_per_epoch,
                              d_loss, g_loss, real_out.mean().item(), fake_out.mean().item(), fake_out2.mean().item()))

@@ -1,7 +1,4 @@
-import torch.nn.parallel
-import matplotlib.pyplot as plt
-import torchvision.utils as vutils
-import numpy as np
+from utils import  set_seed
 from gan import ToyGAN, CelebGAN, ToyOptions, CelebOptions
 
 from torch.utils.tensorboard import SummaryWriter
@@ -12,13 +9,65 @@ from torch.utils.tensorboard import SummaryWriter
 """
 
 def main():
-    results_folder = "results/"
-    writer = SummaryWriter('runs/test')
+    #writer = SummaryWriter('runs/test')
+    set_seed()
+    # 8 gaussians
+    # MinMax
+    results_folder = "8 gauss minmax/"
     # Change the default parameters if needed
     opt = ToyOptions()
     # Set up your model here
     gan = ToyGAN(opt)
-    gan.train(results_folder, writer)
+    gan.train(results_folder)
+
+    # Heuristic
+    results_folder = "8 gauss heuristic/"
+    # Change the default parameters if needed
+    opt = ToyOptions()
+    opt.g_loss = 2
+    # Set up your model here
+    gan = ToyGAN(opt)
+    gan.train(results_folder)
+
+    # Least squares
+    results_folder = "8 gauss least squares/"
+    # Change the default parameters if needed
+    opt = ToyOptions()
+    opt.g_loss = 3
+    # Set up your model here
+    gan = ToyGAN(opt)
+    gan.train(results_folder)
+
+    # 25 gaussians
+    # MinMax
+    results_folder = "25 gauss minmax/"
+    # Change the default parameters if needed
+    opt = ToyOptions()
+    opt.toy_type = 2
+    # Set up your model here
+    gan = ToyGAN(opt)
+    gan.train(results_folder)
+
+    # Heuristic
+    results_folder = "25 gauss heuristic/"
+    # Change the default parameters if needed
+    opt = ToyOptions()
+    opt.toy_type = 2
+    opt.g_loss = 2
+    # Set up your model here
+    gan = ToyGAN(opt)
+    gan.train(results_folder)
+
+    # Least squares
+    results_folder = "25 gauss least squares/"
+    # Change the default parameters if needed
+    opt = ToyOptions()
+    opt.toy_type = 2
+    opt.g_loss = 3
+    # Set up your model here
+    gan = ToyGAN(opt)
+    gan.train(results_folder)
+
 
 if __name__ == '__main__':
     main()

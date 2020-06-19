@@ -1,9 +1,9 @@
 from gan import ToyGAN, CelebGAN
 from parser import Parser
-from torch.utils.tensorboard import SummaryWriter
-
+from utils import set_seed
 
 def main():
+    set_seed()
     results_folder = "../results/"
     # On my laptop it fails if writer is initialised. Don't have time to look into it now
     #writer = SummaryWriter('runs/test')
