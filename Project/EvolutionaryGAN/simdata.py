@@ -146,6 +146,16 @@ class MixtureOfGaussians:
         plt.scatter(x, y, s=1.5)
         plt.show()
 
+    def likelihood_of(self, sample):
+        mus = self.centers()
+        log_likelihood = 1
+        for item in sample:
+            item_likelihood = 0
+            for mu in mus:
+                item_likelihood += np.exp(-(((item[0] - mu[0]) ** 2 + (item[1] - mu[1]) ** 2) / (2.0 * self.__stdev ** 2))) / 2 / np.pi / self.__stdev ** 2
+            log_likelihood += np.log(item_likelihood)
+        return log_likelihood
+
 
 # eight Gaussians arranged in a circle
 class EightInCircle(MixtureOfGaussians):

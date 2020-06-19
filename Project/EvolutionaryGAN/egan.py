@@ -54,6 +54,8 @@ class EGAN():
         # Types of selected generator losses for each training step
         self.selected_g_loss = []
 
+        self.g_sample_loglike = []
+
         # Initialize Discriminator loss functions
         self.d_loss = self.create_d_loss()
         # Initialize Generator loss functions (mutations)
@@ -152,6 +154,7 @@ class EGAN():
 
     def train(self, results_folder):
         fixed_noise = sample_noise(10000)
+        fixed_noise_ll = sample_noise(500)
         num_epochs = self.opt.num_epochs
         print("Starting Training Loop...")
         steps_per_epoch = int(np.floor(len(self.dataset) / self.opt.batch_size))
@@ -224,6 +227,14 @@ class EGAN():
                 self.g_previous = copy.deepcopy(best_individual)
                 self.opt_g_previous = copy.deepcopy(best_individual_optim)
 
+                # save fake sample log likelihood
+                with torch.no_grad():
+                    fake_fixed_ll = self.generator(fixed_noise_ll)
+                fake_shape_ll = fake_fixed_ll.shape
+                fake_sample_fixed_ll = fake_fixed_ll.reshape((fake_shape_ll[0], fake_shape_ll[2])).numpy()
+
+                self.g_sample_loglike.append(self.target_distr().likelihood_of(fake_sample_fixed_ll))
+
                 iter += 1
 
                 # Each few iterations we plot statistics with current discriminator loss, generator loss,
@@ -238,18 +249,27 @@ class EGAN():
             # Check how the generator is doing by saving G's output on fixed_noise
             # I moved it to the end of epoch, but it can be done based on iter value too
             with torch.no_grad():
-                fake = self.generator(fixed_noise)
-            fake_shape = fake.shape
-            self.save_gen_sample(fake.reshape((fake_shape[0], fake_shape[2])).numpy(),
+                fake_fixed = self.generator(fixed_noise)
+            fake_shape = fake_fixed.shape
+            self.save_gen_sample(fake_fixed.reshape((fake_shape[0], fake_shape[2])).numpy(),
                                  "{}epoch {}.png".format(results_folder, epoch + 1))
+
+            print("Sample log likelihood {}".format(self.target_distr().likelihood_of(fake_sample_fixed_ll)))
             # gan.write_to_writer(fake.reshape((fake_shape[0], fake_shape[2])).numpy(),
             #                    "epoch {}".format(epoch+1), writer, epoch)
 
         # Save generator's sample KDE at the end of training
-        fake_shape = fake.shape
         fake = self.generator(fixed_noise).reshape((fake_shape[0], fake_shape[2])).detach().numpy()
         # TODO: will fail for image GAN
         save_kde(fake, self.target_distr(), results_folder)
+
+        # Save fake sample log likelihood plot
+        plt.figure(figsize=(10, 5))
+        plt.title("Fake sample log likelihood")
+        plt.plot(self.g_sample_loglike)
+        plt.xlabel("iterations")
+        plt.ylabel("Log likelohood")
+        plt.savefig("{}Fake log likelihood.png".format(results_folder))
 
         # Train statistics:
         plt.figure(figsize=(10, 5))
