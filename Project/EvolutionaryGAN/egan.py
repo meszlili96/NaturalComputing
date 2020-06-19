@@ -33,7 +33,9 @@ class EGAN():
     __metaclass__ = ABCMeta
     def __init__(self, opt):
         self.opt = opt
-        self.gamma = 0.05
+        # TODO: how do we select gamma? Fitness quality score lies in [0,1] interval,
+        #  diversity score values have higher range
+        self.gamma = 0.5
         self.discriminator = self.create_discriminator()
         self.generator = self.create_generator()
 

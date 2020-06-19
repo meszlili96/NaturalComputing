@@ -1,5 +1,6 @@
 from discr_loss import DiscriminatorLoss
 from simdata import *
+from itertools import islice
 
 # discriminator - discriminator network
 # criterion - discriminator loss function
@@ -43,8 +44,10 @@ def egan_fitness(discriminator, criterion, fake_samples, real_samples, device="c
             grad = grad.view(-1)
             allgrad = grad if i == 0 else torch.cat([allgrad, grad])
 
-    # - log norm computation
-    f_d = torch.log(torch.norm(allgrad)).data.cpu().numpy()
+    # - log norm computation. We should use - indeed, since log is strictly increasing, so the larger the gradients
+    # the larger it's values is. We want it to be smaller for large grads and higher for small grads
+    # (which correspond to better diversity according to the paper)
+    f_d = -torch.log(torch.norm(allgrad)).data.cpu().numpy()
     return f_q, f_d
 
 
@@ -134,26 +137,41 @@ def compute_fitness(discriminator, loss, real_samples, gamma=1):
     perfect_scores = np.array(perfect_scores)
     print("Perfect generator average fitness {}, std {}".format(perfect_scores.mean(), perfect_scores.std()))
 
-def main():
-    # Generator Fitness function demonstration
-    # We assume that real distribution is 8 gaussians and our generator learned only one center
-    # We first train the discriminator to learn 8 gaussians against unifrom
-    iterable_dataset = MixtureOfGaussiansDataset(SimulatedDistribution.eight_gaussians)
-    data_loader = DataLoader(iterable_dataset, batch_size=16)
-    discriminator = DummyDiscriminator()
-    loss = DiscriminatorLoss()
-    print("Training the discriminator on eight gaussians in circle:")
-    train(discriminator, loss, data_loader)
 
-    discriminator.eval()
-    real_distr = EightInCircle()
-    real_samples = real_distr.sample(10)
-    print("Quality and diversity have equal weight:")
-    compute_fitness(discriminator, loss, real_samples, gamma=1)
-    print("Zero diversity weight:")
-    compute_fitness(discriminator, loss, real_samples, gamma=0)
-    print("Gamma 0.5:")
-    compute_fitness(discriminator, loss, real_samples, gamma=0.5)
+def check_diversity_score():
+    # The diversity score function uses gradients norm which is positive
+    gradients_norm = np.linspace(0.01, 10, 10000)
+    div_score = -np.log(gradients_norm)
+
+    plt.plot(gradients_norm, div_score)
+    plt.xlabel('Gradients norm')
+    plt.ylabel('Diversity Score')
+    plt.show()
+
+def main():
+    check_d_score_only = True
+    if check_d_score_only:
+        check_diversity_score()
+    else:
+        # Generator Fitness function demonstration
+        # We assume that real distribution is 8 gaussians and our generator learned only one center
+        # We first train the discriminator to learn 8 gaussians against unifrom
+        iterable_dataset = MixtureOfGaussiansDataset(SimulatedDistribution.eight_gaussians)
+        data_loader = DataLoader(iterable_dataset, batch_size=16)
+        discriminator = DummyDiscriminator()
+        loss = DiscriminatorLoss()
+        print("Training the discriminator on eight gaussians in circle:")
+        train(discriminator, loss, data_loader)
+
+        discriminator.eval()
+        real_distr = EightInCircle()
+        real_samples = real_distr.sample(10)
+        print("Quality and diversity have equal weight:")
+        compute_fitness(discriminator, loss, real_samples, gamma=1)
+        print("Zero diversity weight:")
+        compute_fitness(discriminator, loss, real_samples, gamma=0)
+        print("Gamma 0.5:")
+        compute_fitness(discriminator, loss, real_samples, gamma=0.5)
 
 
 if __name__ == '__main__':
