@@ -33,7 +33,7 @@ class EGAN():
     __metaclass__ = ABCMeta
     def __init__(self, opt):
         self.opt = opt
-        self.gamma = 0.5
+        self.gamma = 0.05
         self.discriminator = self.create_discriminator()
         self.generator = self.create_generator()
 
@@ -61,14 +61,9 @@ class EGAN():
         self.d_optimizer = optim.Adam(self.discriminator.parameters(), lr=opt.lr, betas=(opt.beta1, opt.beta2))
         self.g_optimizer = optim.Adam(self.generator.parameters(), lr=opt.lr, betas=(opt.beta1, opt.beta2))
 
-        # Evolutinoary candidatures setting (init)
-        self.g_cands = []
-        self.opt_g_cands = []
-        candi_num = len(self.g_losses_list)
-        for i in range(candi_num):
-            # We probably want to copy the weights here
-            self.g_cands.append(copy.deepcopy(self.generator.state_dict()))
-            self.opt_g_cands.append(copy.deepcopy(self.g_optimizer.state_dict()))
+        # To keep the best individual parameters during evolution
+        self.g_previous = copy.deepcopy(self.generator.state_dict())
+        self.opt_g_previous = copy.deepcopy(self.g_optimizer.state_dict())
 
         self.dataset = self.create_dataset()
 
@@ -167,6 +162,7 @@ class EGAN():
                 ###########################
                 for param in self.discriminator.parameters():
                     param.requires_grad = True
+
                 fake_sample = self.generator(sample_noise(self.opt.batch_size)).detach()
                 d_loss, real_out, fake_out = self.train_discriminator(fake_sample,
                                                                       real_sample.float())
@@ -180,40 +176,52 @@ class EGAN():
                 # To save trained generators and their optimizers
                 g_list = []
                 opt_g_list = []
+                # Losses of different candidates
                 cand_losses_list = []
-                for index, loss in enumerate(self.g_losses_list):
-                        # Copy the parameters of candidate generator and generator's optimiser
-                        self.generator.load_state_dict(self.g_cands[index])
-                        self.g_optimizer.load_state_dict(self.opt_g_cands[index])
-                        # Generate fake samples
-                        fake_sample = self.generator(sample_noise(self.opt.batch_size))
-                        # Train the current generator
-                        g_loss, fake_out2 = self.train_generator(loss, fake_sample)
-                        cand_losses_list.append(g_loss)
+                # Mean discriminator output on the samples from candidates generators
+                fake_out_2_list = []
 
-                        # Compute fitness score on a sample after training
-                        with torch.no_grad():
-                            fake_sample_trained = self.generator(sample_noise(self.opt.batch_size))
-                        f_q, f_d = egan_fitness(self.discriminator, self.d_loss, fake_sample_trained, real_sample.float())
-                        fitness_score = f_q + self.gamma*f_d
-                        F_scores.append(fitness_score)
+                # Evolutionary part. Enumerate through mutations (loss functions)
+                for _, loss in enumerate(self.g_losses_list):
+                    # Copy the parameters of candidate generator and generator's optimiser
+                    self.generator.load_state_dict(self.g_previous)
+                    self.g_optimizer.load_state_dict(self.opt_g_previous)
+                    # Generate fake samples
+                    fake_sample = self.generator(sample_noise(self.opt.batch_size))
+                    # Train the current generator
+                    g_loss, fake_out2 = self.train_generator(loss, fake_sample)
+                    cand_losses_list.append(g_loss)
+                    fake_out_2_list.append(fake_out2.mean().item())
 
-                        # Save an individual
-                        g_list.append(copy.deepcopy(self.generator.state_dict()))
-                        opt_g_list.append(copy.deepcopy(self.g_optimizer.state_dict()))
+                    # Compute fitness score on a sample after training
+                    with torch.no_grad():
+                        fake_sample_trained = self.generator(sample_noise(self.opt.batch_size))
 
-                # Select best individual based on fitness score
+                    f_q, f_d = egan_fitness(self.discriminator, self.d_loss, fake_sample_trained, real_sample.float())
+                    fitness_score = f_q + self.gamma*f_d
+                    F_scores.append(fitness_score)
+
+                    # Save an individual
+                    g_list.append(copy.deepcopy(self.generator.state_dict()))
+                    opt_g_list.append(copy.deepcopy(self.g_optimizer.state_dict()))
+
+                # Select best individual and its optimizer based on fitness score
                 best_individual_index = F_scores.index(max(F_scores))
-                self.selected_g_loss.append(best_individual_index+1)
-                # Load its weights to generator
-                self.generator.load_state_dict(g_list[best_individual_index])
-                self.g_optimizer.load_state_dict(opt_g_list[best_individual_index])
+                best_individual = g_list[best_individual_index]
+                best_individual_optim = opt_g_list[best_individual_index]
+                # Load these states to generator and optimizer
+                self.generator.load_state_dict(best_individual)
+                self.g_optimizer.load_state_dict(best_individual_optim)
+                # Record which mutation was selected for statistics
+                self.selected_g_loss.append(best_individual_index + 1)
+                # Add loss of the best individual to statistics
                 self.g_losses.append(cand_losses_list[best_individual_index])
+                # Select the discriminator result on the output of the best individual for statistics
+                fake_out_2_mean = fake_out_2_list[best_individual_index]
+                # Save best individual for next evolution
+                self.g_previous = copy.deepcopy(best_individual)
+                self.opt_g_previous = copy.deepcopy(best_individual_optim)
 
-                self.g_cands = copy.deepcopy(g_list)
-                self.opt_g_cands = copy.deepcopy(opt_g_list)
-
-                # Output training stats
                 iter += 1
 
                 # Each few iterations we plot statistics with current discriminator loss, generator loss,
@@ -221,9 +229,9 @@ class EGAN():
                 # mean of discriminator prediction for fake sample before discriminator was trained,
                 # mean of discriminator prediction for fake sample after discriminator was trained,
                 if iter % 100 == 0:
-                    print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f'
-                          % (epoch, num_epochs, iter, steps_per_epoch,
-                             d_loss, self.g_losses[-1], real_out.mean().item(), fake_out.mean().item()))
+                    print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLast Loss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f/D(G(z)): %.4f'
+                          % (epoch+1, num_epochs, iter, steps_per_epoch,
+                             d_loss, self.g_losses[-1], real_out.mean().item(), fake_out.mean().item(), fake_out_2_mean))
 
             # Check how the generator is doing by saving G's output on fixed_noise
             # I moved it to the end of epoch, but it can be done based on iter value too
@@ -238,7 +246,7 @@ class EGAN():
         # Save generator's sample KDE at the end of training
         fake_shape = fake.shape
         fake = self.generator(fixed_noise).reshape((fake_shape[0], fake_shape[2])).detach().numpy()
-        # will fail for image GAN
+        # TODO: will fail for image GAN
         save_kde(fake, self.target_distr(), results_folder)
 
         # Train statistics:
