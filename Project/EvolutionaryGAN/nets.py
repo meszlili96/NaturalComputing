@@ -1,6 +1,15 @@
+import torch
 import torch.nn as nn
+import torch.nn.parallel
+import torch.backends.cudnn as cudnn
+import torch.optim as optim
+import torch.utils.data
+import torchvision.datasets as dset
+import torchvision.transforms as transforms
+import torchvision.utils as vutils
 
-class Generator(nn.Module):
+
+class ImGenerator(nn.Module):
     def __init__(self, ngpu, nc, nz, ngf):
         super(Generator, self).__init__()
         self.ngpu = ngpu
@@ -30,7 +39,7 @@ class Generator(nn.Module):
     def forward(self, input):
         return self.main(input)
 
-class Discriminator(nn.Module):
+class ImDiscriminator(nn.Module):
     def __init__(self, ngpu, nc, ndf):
         super(Discriminator, self).__init__()
         self.ngpu = ngpu
@@ -58,6 +67,85 @@ class Discriminator(nn.Module):
     def forward(self, input):
         return self.main(input)
 
+
+
+class PokeGenerator(nn.Module):
+    #https://github.com/Zhenye-Na/pokemon-gan/blob/master/Pytorch/model/model.py
+    def __init__(self, ngpu):
+        super(PokeGenerator, self).__init__()
+
+        self.conv = nn.Sequential(
+            nn.ConvTranspose2d(in_channels=1, out_channels=192, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(192),
+            nn.ReLU(inplace=True),
+
+            nn.ConvTranspose2d(in_channels=192, out_channels=96, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(96),
+            nn.ReLU(inplace=True),
+
+            nn.ConvTranspose2d(in_channels=96, out_channels=48, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(48),
+            nn.ReLU(inplace=True),
+
+            nn.ConvTranspose2d(in_channels=48, out_channels=24, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(24),
+            nn.ReLU(inplace=True),
+
+            nn.ConvTranspose2d(in_channels=24, out_channels=3, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(3),
+            nn.ReLU(inplace=True),
+
+        )
+
+        self.fc_net = nn.Sequential(
+            nn.Dropout(),
+            nn.Linear(3 * (96 * 96), 3),
+            nn.ReLU(inplace=True),
+            nn.Linear(3, 1)
+        )
+
+    def forward(self, input):
+        input = self.conv(input)
+        input = input.view(input.size(0), -1)
+        input = self.fc_net(input)
+        return input
+
+
+
+class PokeDiscriminator(nn.Module):
+    def __init__(self, ngpu):
+        super(PokeDiscriminator, self).__init__()
+        self.ngpu = ngpu
+        self.conv = nn.Sequential(
+            nn.Conv2d(in_channels=3, out_channels=24, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(24),
+            nn.LeakyReLU(inplace=True),
+
+            nn.Conv2d(in_channels=24, out_channels=48, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(48),
+            nn.LeakyReLU(inplace=True),
+
+            nn.Conv2d(in_channels=48, out_channels=96, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(96),
+            nn.LeakyReLU(inplace=True),
+
+            nn.Conv2d(in_channels=96, out_channels=192, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(192),
+            nn.LeakyReLU(inplace=True)
+        )
+
+        self.fc_net = nn.Sequential(
+            nn.Dropout(),
+            nn.Linear(192 * (96 * 96), 192),
+            nn.ReLU(inplace=True),
+            nn.Linear(192, 1)
+        )
+
+    def forward(self, input):
+        input = self.conv(input)
+        input = input.view(input.size(0), -1)
+        input = self.fc_net(input)
+        return input
 
 # custom weights initialization called on netG and netD
 def weights_init_celeb(m):

@@ -1,5 +1,6 @@
 import copy
 import torch.optim as optim
+from nets import *
 from data import *
 from utils import *
 from gen_losses import *
@@ -28,6 +29,16 @@ class ToyEGANOptions(EGANOptions):
         self.toy_scale = 2.0
         self.toy_len = 50*self.batch_size
 
+
+class PokeEGANOptions(EGANOptions):
+    def __init__(self, ngpu=0):
+        super().__init__(ngpu=ngpu)
+        self.nc = 3
+        self.ndf = 96
+        self.ngf = 96
+        self.nz = 100
+        self.image_size = 96
+        self.dataroot = "pokemon/data"
 
 class EGAN():
     __metaclass__ = ABCMeta
@@ -324,6 +335,30 @@ class ToyEGAN(EGAN):
             raise ValueError
 
 
+class PokeEGAN(EGAN):
+    def __init__(self, opt):
+        super().__init__(opt)
+        self.img_list = []
+    
+    def create_discriminator(self):
+        return PokeDiscriminator(self.opt.ngpu)
+
+    def create_generator(self):
+        return PokeGenerator(self.opt.ngpu)
+
+    def weights_init_func(self):
+        return weights_init_celeb
+
+    def create_dataset(self):
+        return image_dataset(self.opt)
+
+    def save_gen_sample(self, sample, path):
+        plt.figure()
+        plt.imshow(sample)
+        plt.savefig(path)
+        plt.close()
+
+
 def selected_loss_stat(selected_g_losses, results_folder):
     selected_g_losses = np.array(selected_g_losses)
     groups_num = 5
@@ -351,14 +386,14 @@ def selected_loss_stat(selected_g_losses, results_folder):
 
 def main():
     set_seed()
-    # 8 gaussians
+    """# 8 gaussians
     results_folder = "8 gauss egan/"
     # Change the default parameters if needed
     opt = ToyEGANOptions()
     # Set up your model here
     gan = ToyEGAN(opt)
     gan.train(results_folder)
-
+    
     # 25 gaussians
     results_folder = "25 gauss egan/"
     # Change the default parameters if needed
@@ -367,7 +402,17 @@ def main():
     # Set up your model here
     gan = ToyEGAN(opt)
     gan.train(results_folder)
-
+    """
+    
+    #pokemon
+    results_folder = "poke egan/"
+    # Change the default parameters if needed
+    opt = PokeEGANOptions()
+    #opt.toy_type = 2
+    # Set up your model here
+    gan = PokeEGAN(opt)
+    gan.train(results_folder)
+    
 
 if __name__ == '__main__':
     main()
