@@ -9,13 +9,13 @@ from discr_loss import DiscriminatorLoss
 
 class Options():
     def __init__(self, ngpu=0):
-        self.num_epochs = 20
+        self.num_epochs = 50
         self.ngpu = 0
-        self.lr = 1e-03
+        self.lr = 1e-4
         self.beta1 = 0.5
         self.beta2 = 0.999
         self.g_loss = 1
-        self.batch_size = 50
+        self.batch_size = 64
         self.workers = 1
         self.device = torch.device("cuda:0" if (torch.cuda.is_available() and self.ngpu > 0) else "cpu")
 
@@ -26,7 +26,7 @@ class ToyOptions(Options):
         self.toy_type = 1
         self.toy_std = 0.2
         self.toy_scale = 2.0
-        self.toy_len = 50*self.batch_size
+        self.toy_len = 1000*self.batch_size
 
 
 class CelebOptions(Options):
