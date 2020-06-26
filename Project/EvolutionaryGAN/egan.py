@@ -258,7 +258,7 @@ class EGAN():
                 # mean of discriminator prediction for real sample,
                 # mean of discriminator prediction for fake sample before discriminator was trained,
                 # mean of discriminator prediction for fake sample after discriminator was trained,
-                if iter % 50 == 0:
+                if iter % 100 == 0:
                     print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLast Loss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f/D(G(z)): %.4f'
                           % (epoch+1, num_epochs, iter, steps_per_epoch,
                              d_loss, self.g_losses[-1], real_out.mean().item(), fake_out.mean().item(), fake_out_2_mean))

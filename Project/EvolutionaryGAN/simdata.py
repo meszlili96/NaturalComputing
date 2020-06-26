@@ -254,7 +254,7 @@ class ToyGenerator(nn.Module):
 # m - nn.Module object
 def weighs_init_toy(m):
     if type(m) == nn.Linear:
-        nn.init.xavier_uniform_(m.weight)
+        nn.init.xavier_normal_(m.weight)
         m.bias.data.fill_(0.01)
 
 
@@ -277,8 +277,8 @@ def main():
 
     # Demonstration of distributions 2d PDFs and 10 000 samples
     fig, axs = plt.subplots(2, 2)
-    eight = EightInCircle(scale=2)
-    grid = Grid(scale=2)
+    eight = EightInCircle(scale=2, stdev=0.02)
+    grid = Grid(scale=2, stdev=0.05)
 
     _, _, g1 = eight.distribution()
     axs[0, 0].imshow(g1)
