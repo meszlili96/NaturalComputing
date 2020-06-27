@@ -7,10 +7,10 @@ from mpl_toolkits.mplot3d import Axes3D
 from torch.utils.data import DataLoader, IterableDataset
 import torch
 import torch.nn as nn
+from utils import js_divergence
 
 # To add a new distribution subclass MixtureOfGaussians and specify Gaussians centers in a unit square
 # Then add a new case to SimulatedDistribution enum and expand MixtureOfGaussiansDataset with it
-
 class SimulatedDistribution(Enum):
     eight_gaussians = 1
     twenty_five_gaussians = 2
@@ -156,6 +156,69 @@ class MixtureOfGaussians:
             log_likelihood += np.log(item_likelihood)
         return log_likelihood
 
+    """Calculates metrics used in the paper https://arxiv.org/pdf/1811.11357.pdf to evaluate Generator performance:
+            Parameters:
+                sample - a sample from Generator
+            Returns:
+                hq_samples_percentage - a percentage of high quality samples (assigned to a mode)
+                stdev - a tuple (stdev_x, stdev_y), standard deviations of each component of 2D samples
+                js_diver - Jensen-Shannon divergence between the sample mode distribution and a uniform distribution
+         
+    """
+    def measure_sample_quality(self, sample):
+        modes = self.centers()
+
+        # none key is for low quality samples which are not assigned to any mode
+        unassigned_key = "none"
+        sample_distr = {unassigned_key: []}
+        for idx in range(len(modes)):
+            sample_distr[idx] = []
+
+        for point in sample:
+            assigned = False
+            for idx, mode in enumerate(modes):
+                dist = np.linalg.norm(point - mode)
+                if dist < 4 * self.__stdev:
+                    assigned = True
+                    mode_samples = sample_distr[idx]
+                    mode_samples.append(point)
+                    sample_distr[idx] = mode_samples
+                    break
+
+            if not assigned:
+                unassigned_samples = sample_distr[unassigned_key]
+                unassigned_samples.append(point)
+                sample_distr[unassigned_key] = unassigned_samples
+
+        assigned_samples_num = len(sample) - len(sample_distr[unassigned_key])
+        hq_samples_percentage = assigned_samples_num / len(sample)
+
+        # compute stdev for each mode
+        stdevs = []
+        # the distribution of assigned generated samples over modes
+        mode_distr = np.zeros(len(modes))
+        for mode_id, samples in sample_distr.items():
+            if mode_id is not unassigned_key and len(samples) > 0:
+                mode = modes[mode_id]
+                # since we want to measure a spread around the real mode, we use real mode as sample mean
+                mncn_samples = samples - np.asarray(mode)
+                # we are not interested in covariance, so we calculate variance by component
+                # In denominator N-1 is used since we work with a sample
+                stdev = np.sqrt(np.sum((mncn_samples**2), axis=0)/(len(samples)-1))
+                stdevs.append(stdev)
+
+                mode_distr[mode_id] = len(samples)/assigned_samples_num
+
+        #average stdev by component
+        stdev = np.mean(stdevs, axis=0)
+
+        # for mixture of Gaussians all modes are equally likely
+        uniform_distr = np.ones(len(modes))/len(modes)
+        # calculate Jensen-Shannon divergence
+        js_diver = js_divergence(mode_distr, uniform_distr)
+
+        return hq_samples_percentage, stdev, js_diver
+
 
 # eight Gaussians arranged in a circle
 class EightInCircle(MixtureOfGaussians):
@@ -226,6 +289,7 @@ class ToyDiscriminator(nn.Module):
         output = self.sigmoid(self.layer_out(x))
         return output
 
+
 class ToyGenerator(nn.Module):
     def __init__(self, hidden_dim=512):
         super(ToyGenerator, self).__init__()
@@ -275,9 +339,51 @@ def main():
     for n_batch, batch in enumerate(data_loader):
         print(batch)
 
+    # Test sample quality calculation
+    eight = EightInCircle(scale=2, stdev=0.05)
+    # Generate 80% high quality samples uniform distr, low std
+    sample = []
+    # for each mode 400 HG samples and 100 bad samples
+    for mode in eight.centers():
+        stdev = 0.03
+        hq_points = np.random.multivariate_normal(mode, [[stdev**2, 0], [0, stdev**2]], 400)
+        sample.extend(hq_points)
+
+        lq_points = np.random.multivariate_normal(mode, [[stdev ** 2, 0], [0, stdev ** 2]], 100) + [0.5, 0.5]
+        sample.extend(lq_points)
+    hq_percenage, stdev, js_diver = eight.measure_sample_quality(np.array(sample))
+    print("For a good balanced sample {} HG samples rate, stdev {}, JS divergence {}".format(hq_percenage, stdev, js_diver))
+
+    # Generate 80% high quality samples non uniform distr, low std
+    sample = []
+    # for each mode 400 HG samples and 100 bad samples
+    for mode in eight.centers()[:2]:
+        stdev = 0.03
+        hq_points = np.random.multivariate_normal(mode, [[stdev ** 2, 0], [0, stdev ** 2]], 1600)
+        sample.extend(hq_points)
+
+        lq_points = np.random.multivariate_normal(mode, [[stdev ** 2, 0], [0, stdev ** 2]], 400) + [0.5, 0.5]
+        sample.extend(lq_points)
+    hq_percenage, stdev, js_diver = eight.measure_sample_quality(np.array(sample))
+    print("For a good unbalanced sample {} HG samples rate, stdev {}, JS divergence {}".format(hq_percenage, stdev, js_diver))
+
+    # Generate 20% high quality samples non uniform distr, low std
+    sample = []
+    # for each mode 400 HG samples and 100 bad samples
+    for idx, mode in enumerate(eight.centers()):
+        stdev = 0.03
+        hq_points = np.random.multivariate_normal(mode, [[stdev ** 2, 0], [0, stdev ** 2]], 5 if idx < 6 else idx*50)
+        sample.extend(hq_points)
+
+        lq_points = np.random.multivariate_normal(mode, [[stdev ** 2, 0], [0, stdev ** 2]], 400) + [0.5, 0.5]
+        sample.extend(lq_points)
+    hq_percenage, stdev, js_diver = eight.measure_sample_quality(np.array(sample))
+    print(
+        "For a bad unbalanced sample {} HG samples rate, stdev {}, JS divergence {}".format(hq_percenage, stdev, js_diver))
+
     # Demonstration of distributions 2d PDFs and 10 000 samples
     fig, axs = plt.subplots(2, 2)
-    eight = EightInCircle(scale=2, stdev=0.02)
+    eight = EightInCircle(scale=2, stdev=0.05)
     grid = Grid(scale=2, stdev=0.05)
 
     _, _, g1 = eight.distribution()
