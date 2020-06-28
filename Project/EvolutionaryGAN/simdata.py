@@ -61,7 +61,7 @@ class MixtureOfGaussians:
     # scale - when equals 1, the Gaussians centers are placed inside [-1,1] unit square
     #         other values will scale the square accordingly
     def __init__(self, stdev=0.2, scale=1., length=None):
-        self.__stdev = stdev
+        self.stdev = stdev
         self.scale = scale
         self.length = length
 
@@ -77,7 +77,7 @@ class MixtureOfGaussians:
         dataset = []
         for i in range(sample_size):
             mu = random.choice(self.centers())
-            cov = [[self.__stdev ** 2, 0], [0, self.__stdev ** 2]]
+            cov = [[self.stdev ** 2, 0], [0, self.stdev ** 2]]
             point = np.random.multivariate_normal(mu, cov)
             dataset.append(point)
 
@@ -102,10 +102,10 @@ class MixtureOfGaussians:
         # by looking for minimum and maximum x and y in Gaussians centers
         # then 3 standard deviatios are added to get correct border
         # because approx 99 % of PDF is inside 3 standard deviatios
-        min_x = min(mus, key=lambda t: t[0])[0] - 3 * self.__stdev
-        max_x = max(mus, key=lambda t: t[0])[0] + 3 * self.__stdev
-        min_y = min(mus, key=lambda t: t[1])[1] - 3 * self.__stdev
-        max_y = max(mus, key=lambda t: t[1])[1] + 3 * self.__stdev
+        min_x = min(mus, key=lambda t: t[0])[0] - 3 * self.stdev
+        max_x = max(mus, key=lambda t: t[0])[0] + 3 * self.stdev
+        min_y = min(mus, key=lambda t: t[1])[1] - 3 * self.stdev
+        max_y = max(mus, key=lambda t: t[1])[1] + 3 * self.stdev
 
         # define number of points for PDF based on borders and unit grid size
         x_grid_size = round(unit_grid_size * (max_x - min_x) / 2)
@@ -119,7 +119,7 @@ class MixtureOfGaussians:
         g = np.zeros(x.shape)
         for mu in mus:
             g += np.exp(
-                -(((x - mu[0]) ** 2 + (y - mu[1]) ** 2) / (2.0 * self.__stdev ** 2))) / 2 / np.pi / self.__stdev ** 2
+                -(((x - mu[0]) ** 2 + (y - mu[1]) ** 2) / (2.0 * self.stdev ** 2))) / 2 / np.pi / self.stdev ** 2
 
         return x, y, g
 
@@ -152,7 +152,7 @@ class MixtureOfGaussians:
         for item in sample:
             item_likelihood = 0
             for mu in mus:
-                item_likelihood += np.exp(-(((item[0] - mu[0]) ** 2 + (item[1] - mu[1]) ** 2) / (2.0 * self.__stdev ** 2))) / 2 / np.pi / self.__stdev ** 2
+                item_likelihood += np.exp(-(((item[0] - mu[0]) ** 2 + (item[1] - mu[1]) ** 2) / (2.0 * self.stdev ** 2))) / 2 / np.pi / self.stdev ** 2
             log_likelihood += np.log(item_likelihood)
         return log_likelihood
 
@@ -178,7 +178,7 @@ class MixtureOfGaussians:
             assigned = False
             for idx, mode in enumerate(modes):
                 dist = np.linalg.norm(point - mode)
-                if dist < 4 * self.__stdev:
+                if dist < 4 * self.stdev:
                     assigned = True
                     mode_samples = sample_distr[idx]
                     mode_samples.append(point)

@@ -12,33 +12,68 @@ def sample_noise(size):
     return noise
 
 
-def save_kde(sample, target_distr, results_folder):
-    x, y, d = target_distr.distribution()
+""" Estimates KDE for a sample
+    Parameters:
+        sample - sample from a generated distribution
+        bandwidth - a user specified bandwidth
+    Returns:
+        KDE
+"""
+def sample_kde(sample, bandwidth=0.025):
+    kernel = KernelDensity(bandwidth=bandwidth)
+    kernel.fit(sample)
+    return kernel
+
+
+""" Calculates real data log likelihood under the generator distribution estimated from a sample
+    Parameters:
+        gen_sample - a sample from a generated distribution
+        real_data - a sample of real data 
+        bandwidth - a user specified bandwidth
+    Returns:
+        KDE
+"""
+def data_log_likelihood(gen_sample, real_data, bandwidth=None):
+    kernel = sample_kde(gen_sample) if bandwidth is None else sample_kde(gen_sample, bandwidth)
+    log_likelihood = kernel.score_samples(real_data)
+    return np.average(log_likelihood)
+
+
+""" Plots a KDE from a sample
+    Parameters:
+        sample - sample from a generated distribution
+        target_distr - a distribution we try to approximate. Needed to get target (x,y) grid and stdev
+        results_folder -  a path to save the results
+        filename - a specific KDE name
+"""
+def save_kde(sample, target_distr, results_folder, filename, bandwidth=None):
+    x, y, _ = target_distr.distribution()
     xy = np.vstack([x.ravel(), y.ravel()]).T
 
-    bandwidth = 0.2
-    kde = KernelDensity(bandwidth=bandwidth)
-    kde.fit(sample)
+    kernel = sample_kde(sample) if bandwidth is None else sample_kde(sample, bandwidth)
 
-    z = np.exp(kde.score_samples(xy)).reshape(x.shape)
+    z = np.exp(kernel.score_samples(xy)).reshape(x.shape)
     plt.figure()
     plt.imshow(z)
-    plt.savefig("{}KDE.png".format(results_folder))
+    plt.savefig("{}/KDE {}.png".format(results_folder, filename))
 
-
-def kde_cv(target_distr):
-    sample = target_distr.sample(10000)
-    bandwidths = np.linspace(0, 1, 20)
+""" Selects the best bandwidth with CV
+    Parameters:
+        target_distr - a target distribution to sample from 
+        bandwidths - an array of bandwidths for CV
+"""
+def kde_cv(target_distr, bandwidths):
+    sample = target_distr.sample(5000)
     grid = GridSearchCV(KernelDensity(kernel='gaussian'),
                         {'bandwidth': bandwidths},
                         cv=LeaveOneOut())
     grid.fit(sample)
-    print(grid.best_params_)
+    print("Best bandwidth params: {}".format(grid.best_params_))
 
 
 def set_seed(seed=99):
-    torch.manual_seed(99)
-    np.random.seed(99)
+    torch.manual_seed(seed)
+    np.random.seed(seed)
 
 
 # KL-divergence for discrete probability distributions
@@ -75,6 +110,32 @@ def main():
     # same distribution
     js_diver = js_divergence(uniform_distr, uniform_distr)
     print("Same distribution {}".format(js_diver))
+
+    # test KDE
+    output_dir = "utils tests"
+    from simdata import EightInCircle, Grid
+    eight = EightInCircle(scale=2, stdev=0.05)
+    sample = eight.sample(5000)
+    save_kde(sample, eight, output_dir, "8 in Circle")
+    
+    grid = Grid(scale=2, stdev=0.05)
+    sample_real = grid.sample(5000)
+    save_kde(sample_real, grid, output_dir, "25 in Grid")
+    print("Data LL, different distributions: {}".format(data_log_likelihood(sample, sample_real)))
+
+    eight2 = EightInCircle(scale=2, stdev=0.02)
+    sample_real = eight2.sample(5000)
+    print("Data LL, similar distributions: {}".format(data_log_likelihood(sample, sample_real)))
+
+    # Eight in circle bandwidth CV
+    # 0.05
+    #kde_cv(eight, np.linspace(0, 0.5, 41))
+    # 0.02
+    #kde_cv(eight2, np.linspace(0, 0.4, 41))
+    # 0.2
+    #kde_cv(EightInCircle(scale=2, stdev=0.2), np.linspace(0, 1, 21))
+    # 25 in grid bandwidth CV
+    #kde_cv(grid, np.linspace(0, 0.5, 41))
 
 
 if __name__ == '__main__':
