@@ -75,23 +75,23 @@ class PokeGenerator(nn.Module):
         super(PokeGenerator, self).__init__()
 
         self.conv = nn.Sequential(
-            nn.ConvTranspose2d(in_channels=1, out_channels=192, kernel_size=5, stride=1, padding=2),
+            nn.ConvTranspose2d(in_channels=1, out_channels=192, kernel_size=3, stride=1, padding=2),
             nn.BatchNorm2d(192),
             nn.ReLU(inplace=True),
 
-            nn.ConvTranspose2d(in_channels=192, out_channels=96, kernel_size=5, stride=1, padding=2),
+            nn.ConvTranspose2d(in_channels=192, out_channels=96, kernel_size=3, stride=1, padding=2),
             nn.BatchNorm2d(96),
             nn.ReLU(inplace=True),
 
-            nn.ConvTranspose2d(in_channels=96, out_channels=48, kernel_size=5, stride=1, padding=2),
+            nn.ConvTranspose2d(in_channels=96, out_channels=48, kernel_size=3, stride=1, padding=2),
             nn.BatchNorm2d(48),
             nn.ReLU(inplace=True),
 
-            nn.ConvTranspose2d(in_channels=48, out_channels=24, kernel_size=5, stride=1, padding=2),
+            nn.ConvTranspose2d(in_channels=48, out_channels=24, kernel_size=3, stride=1, padding=2),
             nn.BatchNorm2d(24),
             nn.ReLU(inplace=True),
 
-            nn.ConvTranspose2d(in_channels=24, out_channels=3, kernel_size=5, stride=1, padding=2),
+            nn.ConvTranspose2d(in_channels=24, out_channels=3, kernel_size=3, stride=1, padding=2),
             nn.BatchNorm2d(3),
             nn.ReLU(inplace=True),
 
@@ -117,19 +117,19 @@ class PokeDiscriminator(nn.Module):
         super(PokeDiscriminator, self).__init__()
         self.ngpu = ngpu
         self.conv = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=24, kernel_size=5, stride=1, padding=2),
+            nn.Conv2d(in_channels=3, out_channels=24, kernel_size=3, stride=1, padding=2),
             nn.BatchNorm2d(24),
             nn.LeakyReLU(inplace=True),
 
-            nn.Conv2d(in_channels=24, out_channels=48, kernel_size=5, stride=1, padding=2),
+            nn.Conv2d(in_channels=24, out_channels=48, kernel_size=3, stride=1, padding=2),
             nn.BatchNorm2d(48),
             nn.LeakyReLU(inplace=True),
 
-            nn.Conv2d(in_channels=48, out_channels=96, kernel_size=5, stride=1, padding=2),
+            nn.Conv2d(in_channels=48, out_channels=96, kernel_size=3, stride=1, padding=2),
             nn.BatchNorm2d(96),
             nn.LeakyReLU(inplace=True),
 
-            nn.Conv2d(in_channels=96, out_channels=192, kernel_size=5, stride=1, padding=2),
+            nn.Conv2d(in_channels=96, out_channels=192, kernel_size=3, stride=1, padding=2),
             nn.BatchNorm2d(192),
             nn.LeakyReLU(inplace=True)
         )
