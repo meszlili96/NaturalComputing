@@ -1,4 +1,5 @@
 import numpy as np
+import random
 import torch
 from sklearn.neighbors import KernelDensity
 from sklearn.model_selection import GridSearchCV
@@ -19,7 +20,7 @@ def sample_noise(size):
     Returns:
         KDE
 """
-def sample_kde(sample, bandwidth=0.025):
+def sample_kde(sample, bandwidth):
     kernel = KernelDensity(bandwidth=bandwidth)
     kernel.fit(sample)
     return kernel
@@ -33,8 +34,8 @@ def sample_kde(sample, bandwidth=0.025):
     Returns:
         KDE
 """
-def data_log_likelihood(gen_sample, real_data, bandwidth=None):
-    kernel = sample_kde(gen_sample) if bandwidth is None else sample_kde(gen_sample, bandwidth)
+def data_log_likelihood(gen_sample, real_data, stdev):
+    kernel = sample_kde(gen_sample, stdev/2)
     log_likelihood = kernel.score_samples(real_data)
     return np.average(log_likelihood)
 
@@ -46,11 +47,11 @@ def data_log_likelihood(gen_sample, real_data, bandwidth=None):
         results_folder -  a path to save the results
         filename - a specific KDE name
 """
-def save_kde(sample, target_distr, results_folder, filename, bandwidth=None):
+def save_kde(sample, target_distr, results_folder, filename):
     x, y, _ = target_distr.distribution()
     xy = np.vstack([x.ravel(), y.ravel()]).T
 
-    kernel = sample_kde(sample) if bandwidth is None else sample_kde(sample, bandwidth)
+    kernel = sample_kde(sample, target_distr.stdev/2)
 
     z = np.exp(kernel.score_samples(xy)).reshape(x.shape)
     plt.figure()
@@ -72,6 +73,7 @@ def kde_cv(target_distr, bandwidths):
 
 
 def set_seed(seed=99):
+    random.seed(30)
     torch.manual_seed(seed)
     np.random.seed(seed)
 
@@ -121,11 +123,11 @@ def main():
     grid = Grid(scale=2, stdev=0.05)
     sample_real = grid.sample(5000)
     save_kde(sample_real, grid, output_dir, "25 in Grid")
-    print("Data LL, different distributions: {}".format(data_log_likelihood(sample, sample_real)))
+    print("Data LL, different distributions: {}".format(data_log_likelihood(sample, sample_real, 0.05)))
 
     eight2 = EightInCircle(scale=2, stdev=0.02)
     sample_real = eight2.sample(5000)
-    print("Data LL, similar distributions: {}".format(data_log_likelihood(sample, sample_real)))
+    print("Data LL, similar distributions: {}".format(data_log_likelihood(sample, sample_real, 0.05)))
 
     # Eight in circle bandwidth CV
     # 0.05

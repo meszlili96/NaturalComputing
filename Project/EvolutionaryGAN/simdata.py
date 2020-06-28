@@ -20,15 +20,15 @@ class MixtureOfGaussiansDataset(IterableDataset):
     def __init__(self, distribution: SimulatedDistribution, stdev=0.2, scale=1., length=None):
         super(MixtureOfGaussiansDataset).__init__()
         if distribution == SimulatedDistribution.eight_gaussians:
-            self.mixture_of_gaussians = EightInCircle(stdev=stdev, scale=scale, length=length)
+            self.distribution = EightInCircle(stdev=stdev, scale=scale, length=length)
         elif distribution == SimulatedDistribution.twenty_five_gaussians:
-            self.mixture_of_gaussians = Grid(stdev=stdev, scale=scale,length=length)
+            self.distribution = Grid(stdev=stdev, scale=scale,length=length)
         elif distribution == SimulatedDistribution.standard_gaussian:
-            self.mixture_of_gaussians = StandardGaussian(stdev=stdev, scale=scale, length=length)
+            self.distribution = StandardGaussian(stdev=stdev, scale=scale, length=length)
         else:
             raise ValueError
 
-        self.data_generator = self.mixture_of_gaussians.data_generator()
+        self.data_generator = self.distribution.data_generator()
         self.length = length
 
     def __iter__(self):
@@ -320,15 +320,6 @@ def weighs_init_toy(m):
     if type(m) == nn.Linear:
         nn.init.xavier_normal_(m.weight)
         m.bias.data.fill_(0.01)
-
-
-def save_sample(sample, path):
-    x, y = extract_xy(sample)
-
-    plt.figure()
-    plt.scatter(x, y, s=1.5)
-    plt.savefig(path)
-    plt.close()
 
 
 def main():
