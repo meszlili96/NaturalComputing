@@ -11,7 +11,7 @@ from fitness_function import egan_fitness
 class EGANOptions():
     def __init__(self, ngpu=0):
         self.num_epochs = 100
-        self.ngpu = 0
+        self.ngpu = 1
         self.lr = 1e-4
         self.beta1 = 0.5
         self.beta2 = 0.999

@@ -51,7 +51,8 @@ def save_kde(sample, target_distr, results_folder, filename):
     x, y, _ = target_distr.distribution()
     xy = np.vstack([x.ravel(), y.ravel()]).T
 
-    kernel = sample_kde(sample, target_distr.stdev/2)
+    # if a bandwith selected by CV (stdev/2) is used, KDE plot is hardly visible
+    kernel = sample_kde(sample, target_distr.stdev*3)
 
     z = np.exp(kernel.score_samples(xy)).reshape(x.shape)
     plt.figure()
@@ -73,7 +74,7 @@ def kde_cv(target_distr, bandwidths):
 
 
 def set_seed(seed=99):
-    random.seed(30)
+    random.seed(seed)
     torch.manual_seed(seed)
     np.random.seed(seed)
 
@@ -116,12 +117,12 @@ def main():
     # test KDE
     output_dir = "utils tests"
     from simdata import EightInCircle, Grid
-    eight = EightInCircle(scale=2, stdev=0.05)
-    sample = eight.sample(5000)
+    eight = EightInCircle(scale=2, stdev=0.02)
+    sample = eight.sample(10000)
     save_kde(sample, eight, output_dir, "8 in Circle")
     
     grid = Grid(scale=2, stdev=0.05)
-    sample_real = grid.sample(5000)
+    sample_real = grid.sample(10000)
     save_kde(sample_real, grid, output_dir, "25 in Grid")
     print("Data LL, different distributions: {}".format(data_log_likelihood(sample, sample_real, 0.05)))
 

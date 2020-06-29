@@ -108,8 +108,8 @@ class MixtureOfGaussians:
         max_y = max(mus, key=lambda t: t[1])[1] + 3 * self.stdev
 
         # define number of points for PDF based on borders and unit grid size
-        x_grid_size = round(unit_grid_size * (max_x - min_x) / 2)
-        y_grid_size = round(unit_grid_size * (max_y - min_y) / 2)
+        x_grid_size = int(round(unit_grid_size * (max_x - min_x) / 2))
+        y_grid_size = int(round(unit_grid_size * (max_y - min_y) / 2))
 
         # make grid
         x, y = np.meshgrid(np.linspace(min_x, max_x, x_grid_size),
@@ -204,7 +204,7 @@ class MixtureOfGaussians:
                 mncn_samples = samples - np.asarray(mode)
                 # we are not interested in covariance, so we calculate variance by component
                 # In denominator N-1 is used since we work with a sample
-                stdev = np.sqrt(np.sum((mncn_samples**2), axis=0)/(len(samples)-1))
+                stdev = np.sqrt(np.sum((mncn_samples**2), axis=0)/len(samples))
                 stdevs.append(stdev)
 
                 mode_distr[mode_id] = len(samples)/assigned_samples_num
@@ -266,7 +266,7 @@ class StandardGaussian(MixtureOfGaussians):
 
 
 class ToyDiscriminator(nn.Module):
-    def __init__(self, hidden_dim=512):
+    def __init__(self, hidden_dim=100):
         super(ToyDiscriminator, self).__init__()
         # Number of input features is 2, since we work with 2d gaussians
         # Define 3 dense layers with the same number of hidden units
@@ -291,7 +291,7 @@ class ToyDiscriminator(nn.Module):
 
 
 class ToyGenerator(nn.Module):
-    def __init__(self, hidden_dim=512):
+    def __init__(self, hidden_dim=100):
         super(ToyGenerator, self).__init__()
         # Number of input features is 2, since our noise is 2D
         # Define 3 dense layers with the same number of hidden units
@@ -374,7 +374,7 @@ def main():
 
     # Demonstration of distributions 2d PDFs and 10 000 samples
     fig, axs = plt.subplots(2, 2)
-    eight = EightInCircle(scale=2, stdev=0.05)
+    eight = EightInCircle(scale=2, stdev=0.02)
     grid = Grid(scale=2, stdev=0.05)
 
     _, _, g1 = eight.distribution()
