@@ -4,27 +4,11 @@ import torch.utils.data as data
 import matplotlib.pyplot as plt
 from itertools import islice
 
-from simdata import MixtureOfGaussiansDataset, SimulatedDistribution, extract_xy
+from utils import *
+from simdata import MixtureOfGaussiansDataset, SimulatedDistribution
 from nets import ToyDiscriminator, ToyGenerator, weighs_init_toy
 from discr_loss import DiscriminatorLoss
 from gen_losses import Minmax
-
-
-
-def save_sample(sample, img_name):
-    x, y = extract_xy(sample)
-
-    plt.figure()
-    plt.scatter(x, y, s=1.5)
-    plt.savefig(img_name)
-    plt.close()
-
-
-# Samples noise from unifrom distribution for Generator
-def sample_noise(size):
-    noise = -1 * torch.rand(size, 2) + 0.5
-    return noise
-
 
 def train_discriminator(discriminator, loss, optimizer, fake_sample, real_sample):
     optimizer.zero_grad()

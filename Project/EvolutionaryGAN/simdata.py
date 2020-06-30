@@ -264,64 +264,6 @@ class StandardGaussian(MixtureOfGaussians):
     def centers(self):
         return [self.__center]
 
-
-class ToyDiscriminator(nn.Module):
-    def __init__(self, hidden_dim=100):
-        super(ToyDiscriminator, self).__init__()
-        # Number of input features is 2, since we work with 2d gaussians
-        # Define 3 dense layers with the same number of hidden units
-        self.layer_1 = nn.Linear(2, hidden_dim)
-        self.layer_2 = nn.Linear(hidden_dim, hidden_dim)
-        self.layer_3 = nn.Linear(hidden_dim, hidden_dim)
-        # output layer
-        self.layer_out = nn.Linear(hidden_dim, 1)
-        # Batch normalization
-        self.batch_norm = nn.BatchNorm1d(1)
-        # Relu activation is for hidden layers
-        self.relu = nn.ReLU()
-        # Sigmoid activation is for output binary classification layer
-        self.sigmoid = nn.Sigmoid()
-
-    def forward(self, sample):
-        x = self.relu(self.layer_1(sample))
-        x = self.relu(self.batch_norm(self.layer_2(x)))
-        x = self.relu(self.layer_3(x))
-        output = self.sigmoid(self.layer_out(x))
-        return output
-
-
-class ToyGenerator(nn.Module):
-    def __init__(self, hidden_dim=100):
-        super(ToyGenerator, self).__init__()
-        # Number of input features is 2, since our noise is 2D
-        # Define 3 dense layers with the same number of hidden units
-        self.layer_1 = nn.Linear(2, hidden_dim)
-        self.layer_2 = nn.Linear(hidden_dim, hidden_dim)
-        self.layer_3 = nn.Linear(hidden_dim, hidden_dim)
-        # output layer
-        self.layer_out = nn.Linear(hidden_dim, 2)
-        # Relu activation is for hidden layers
-        self.relu = nn.ReLU()
-
-    def forward(self, noise):
-        x = self.relu(self.layer_1(noise))
-        x = self.relu(self.layer_2(x))
-        x = self.relu(self.layer_3(x))
-        output = self.layer_out(x)
-        out_shape = output.shape
-        # Reshape the output to discriminator input format
-        return output.reshape((out_shape[0], 1, out_shape[1]))
-
-
-# The function to initialize NN weights
-# Recursively applied to the layers of the passed module
-# m - nn.Module object
-def weighs_init_toy(m):
-    if type(m) == nn.Linear:
-        nn.init.xavier_normal_(m.weight)
-        m.bias.data.fill_(0.01)
-
-
 def main():
     # Demonstration of data generation
     batch_size = 4

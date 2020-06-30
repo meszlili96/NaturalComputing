@@ -7,11 +7,12 @@ import torch.utils.data
 import torchvision.datasets as dset
 import torchvision.transforms as transforms
 import torchvision.utils as vutils
+import numpy as np
 
 
 class ImGenerator(nn.Module):
     def __init__(self, ngpu, nc, nz, ngf):
-        super(DCGANGenerator, self).__init__()
+        super(ImGenerator, self).__init__()
         self.ngpu = ngpu
         self.main = nn.Sequential(
             # input is Z, going into a convolution
@@ -41,7 +42,7 @@ class ImGenerator(nn.Module):
 
 class ImDiscriminator(nn.Module):
     def __init__(self, ngpu, nc, ndf):
-        super(DCGANDiscriminator, self).__init__()
+        super(ImDiscriminator, self).__init__()
         self.ngpu = ngpu
         self.main = nn.Sequential(
             # input is (nc) x 64 x 64
@@ -160,7 +161,7 @@ def weights_init_DCGAN(m):
         nn.init.constant_(m.bias.data, 0)
 
 class ToyDiscriminator(nn.Module):
-    def __init__(self, hidden_dim=512):
+    def __init__(self, hidden_dim=100):
         super(ToyDiscriminator, self).__init__()
         # Number of input features is 2, since we work with 2d gaussians
         # Define 3 dense layers with the same number of hidden units
@@ -184,7 +185,7 @@ class ToyDiscriminator(nn.Module):
         return output
 
 class ToyGenerator(nn.Module):
-    def __init__(self, hidden_dim=512):
+    def __init__(self, hidden_dim=100):
         super(ToyGenerator, self).__init__()
         # Number of input features is 2, since our noise is 2D
         # Define 3 dense layers with the same number of hidden units
@@ -205,12 +206,13 @@ class ToyGenerator(nn.Module):
         # Reshape the output to discriminator input format
         return output.reshape((out_shape[0], 1, out_shape[1]))
 
+
 # The function to initialize NN weights
 # Recursively applied to the layers of the passed module
 # m - nn.Module object
 def weighs_init_toy(m):
     if type(m) == nn.Linear:
-        nn.init.xavier_uniform_(m.weight)
+        nn.init.xavier_normal_(m.weight)
         m.bias.data.fill_(0.01)
 
 class WassersteinGenerator(nn.Module):
