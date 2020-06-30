@@ -75,7 +75,7 @@ class PokeGenerator(nn.Module):
         super(PokeGenerator, self).__init__()
 
         self.conv = nn.Sequential(
-            nn.ConvTranspose2d(in_channels=1, out_channels=192, kernel_size=3, stride=1, padding=2),
+            nn.ConvTranspose2d(in_channels=64, out_channels=192, kernel_size=3, stride=1, padding=2),
             nn.BatchNorm2d(192),
             nn.ReLU(inplace=True),
 

@@ -466,6 +466,9 @@ class PokeEGAN(EGAN):
     def evaluate(self, fake_sample, real_sample):
         pass
 
+    def real_sample(self, eval_sample_size):
+        pass
+
     def save_statistics(self, fake_sample):
         pass
 
