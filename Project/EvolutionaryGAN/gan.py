@@ -2,16 +2,19 @@ import os
 import torch
 import torch.optim as optim
 import torch.nn as nn
+from torch.tensor import Tensor
+from torch.autograd import Variable
+from torchvision.utils import save_image
 import matplotlib.pyplot as plt
 import numpy as np
 from abc import ABCMeta, abstractmethod
 
-from nets import DCGANGenerator, DCGANDiscriminator, weights_init_DCGAN, ToyGenerator, ToyDiscriminator, weighs_init_toy, WassersteinDiscriminator
-from data import toy_dataset, image_dataset
+from nets import DCGANGenerator, DCGANDiscriminator, weights_init_DCGAN, ToyGenerator, ToyDiscriminator, weighs_init_toy, WassersteinDiscriminator, WassersteinGenerator
+from data import toy_dataset, image_dataset, mnist_dataset
 from utils import sample_noise, save_kde
-from gen_losses import Minmax, Heuristic, LeastSquares, WassersteinGeneratorLoss
+from gen_losses import Minmax, Heuristic, LeastSquares
 from simdata import save_sample, extract_xy, EightInCircle, Grid, StandardGaussian, SimulatedDistribution
-from discr_loss import DiscriminatorLoss, WassersteinDiscriminatorLoss
+from discr_loss import DiscriminatorLoss
 
 
 class Options():
@@ -88,8 +91,8 @@ class GAN():
         self.g_loss = self.create_g_loss()
 
         # Setup Adam optimizers for both G and D
-        self.d_optimizer = optim.Adam(self.discriminator.parameters(), lr=opt.lr, betas=(opt.beta1, opt.beta2))
-        self.g_optimizer = optim.Adam(self.generator.parameters(), lr=opt.lr, betas=(opt.beta1, opt.beta2))
+        self.d_optimizer = self.create_d_optimizer(opt)
+        self.g_optimizer = self.create_g_optimizer(opt)
 
         self.dataset = self.create_dataset()
 
@@ -123,6 +126,16 @@ class GAN():
             return LeastSquares()
         else:
             raise ValueError
+
+    """Defines the optimizer for the discriminator
+    """
+    def create_d_optimizer(self,opt):
+        return optim.Adam(self.discriminator.parameters(), lr=opt.lr, betas=(opt.beta1, opt.beta2))
+    
+    """Defines the optimizer for the generator
+    """
+    def create_g_optimizer(self,opt):
+        return optim.Adam(self.generator.parameters(), lr=opt.lr, betas=(opt.beta1, opt.beta2))
 
     """Defines and returns function that initializes NN weights
     """
@@ -336,14 +349,87 @@ class DCGAN(GAN):
         plt.close()
 
 class WGAN(GAN):
-    def create_d_loss(self):
-        return WassersteinDiscriminatorLoss()
+    def create_d_optimizer(self,opt):
+        return optim.RMSprop(self.discriminator.parameters(), lr=opt.lr)
 
-    def create_g_loss(self):
-        return WassersteinGeneratorLoss()
-
+    def create_g_optimizer(self,opt):
+        return optim.RMSprop(self.generator.parameters(), lr=opt.lr)
+    
     def create_discriminator(self):
-        return WassersteinDiscriminator(self.opt.ngpu, self.opt.nc, self.opt.nz, self.opt.ngf).to(self.opt.device)
+        return WassersteinDiscriminator(self.opt.nc, self.opt.image_size)
     
     def create_generator(self):
-        return DCGANGenerator(self.opt.ngpu, self.opt.nc, self.opt.nz, self.opt.ngf).to(self.opt.device)
+        return WassersteinGenerator(self.opt.nz, self.opt.nc, self.opt.image_size)
+    
+    def weights_init_func(self):
+        return weights_init_DCGAN
+
+    def create_dataset(self):
+        return mnist_dataset(self.opt)
+    
+    def train(self, results_folder, writer=None):
+        # Create results directory
+        try:
+            os.mkdir(results_folder)
+        except FileExistsError:
+            pass
+
+        num_epochs = self.opt.num_epochs
+        n_critic = 5
+        clip_value = 0.01
+        iters = 0
+        print("Starting Training Loop...")
+        # For each epoch
+        for epoch in range(num_epochs):
+        
+            for i, (imgs, _) in enumerate(self.dataset):
+        
+                # Configure input
+                real_imgs = Variable(imgs.type(Tensor))
+        
+                # ---------------------
+                #  Train Discriminator
+                # ---------------------
+        
+                self.d_optimizer.zero_grad()
+        
+                # Sample noise as generator input
+                z = Variable(Tensor(np.random.normal(0, 1, (imgs.shape[0], self.opt.nz))))
+        
+                # Generate a batch of images
+                fake_imgs = self.generator(z).detach()
+                # Adversarial loss
+                loss_D = -torch.mean(self.discriminator(real_imgs)) + torch.mean(self.discriminator(fake_imgs))
+        
+                loss_D.backward()
+                self.d_optimizer.step()
+        
+                # Clip weights of discriminator
+                for p in self.discriminator.parameters():
+                    p.data.clamp_(-clip_value, clip_value)
+        
+                # Train the generator every n_critic iterations
+                if i % n_critic == 0:
+        
+                    # -----------------
+                    #  Train Generator
+                    # -----------------
+        
+                    self.g_optimizer.zero_grad()
+        
+                    # Generate a batch of images
+                    gen_imgs = self.generator(z)
+                    # Adversarial loss
+                    loss_G = -torch.mean(self.discriminator(gen_imgs))
+        
+                    loss_G.backward()
+                    self.g_optimizer.step()
+        
+                    print(
+                        "[Epoch %d/%d] [Batch %d/%d] [D loss: %f] [G loss: %f]"
+                        % (epoch, num_epochs, iters % len(self.dataset), len(self.dataset), loss_D.item(), loss_G.item())
+                    )
+        
+                if iters % 400 == 0:
+                    save_image(gen_imgs.data[:25], "images/%d.png" % iters, nrow=5, normalize=True)
+                iters += 1

@@ -27,3 +27,15 @@ def image_dataset(opt):
     dataloader = DataLoader(dataset, batch_size=opt.batch_size,
                                              shuffle=True, num_workers=opt.workers)
     return dataloader
+
+def mnist_dataset(opt):
+    return DataLoader(
+            dset.MNIST(
+                "../../data/mnist",
+                train=True,
+                download=True,
+                transform=transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5], [0.5])]),
+            ),
+            batch_size=opt.batch_size,
+            shuffle=True,
+        )

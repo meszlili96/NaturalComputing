@@ -1,4 +1,4 @@
-from gan import ToyGAN
+from gan import ToyGAN, WGAN
 from parser import Parser
 from utils import set_seed
 
@@ -10,6 +10,7 @@ def main():
     opt = Parser().parse()
     # Set up your model here
     gan = ToyGAN(opt)
+    #gan = WGAN(opt)
     gan.train(results_folder, None)
 
 if __name__ == '__main__':

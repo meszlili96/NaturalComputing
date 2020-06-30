@@ -38,7 +38,6 @@ class DiscriminatorLoss(nn.Module):
 
         return loss_fake, loss_real
 
-
 def main():
     # Generator loss functions demonstration:
     output_dim = 10
