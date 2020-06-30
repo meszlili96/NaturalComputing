@@ -35,10 +35,10 @@ class PokeEGANOptions(EGANOptions):
     def __init__(self, ngpu=0):
         super().__init__(ngpu=ngpu)
         self.nc = 3
-        self.ndf = 96
-        self.ngf = 96
-        self.nz = 100
-        self.image_size = 96
+        self.ndf = 64
+        self.ngf = 64
+        self.nz = 64
+        self.image_size = 64
         self.dataroot = "pokemon/data"
 
 class EGAN():
@@ -446,13 +446,13 @@ class PokeEGAN(EGAN):
         self.img_list = []
     
     def create_discriminator(self):
-        return PokeDiscriminator(self.opt.ngpu)
+        return PokeDiscriminator(self.opt.ngpu, self.opt.nc, self.opt.ndf)
 
     def create_generator(self):
-        return PokeGenerator(self.opt.ngpu)
+        return PokeGenerator(self.opt.ngpu, self.opt.nc, self.opt.nz, self.opt.ngf)
 
     def weights_init_func(self):
-        return weights_init_celeb
+        return weights_init_celeb #these weights will probably be alright
 
     def create_dataset(self):
         return image_dataset(self.opt)

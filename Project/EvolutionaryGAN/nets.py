@@ -15,7 +15,7 @@ class ImGenerator(nn.Module):
         self.ngpu = ngpu
         self.main = nn.Sequential(
             # input is Z, going into a convolution
-            nn.ConvTranspose2d( nz, ngf * 8, 4, 1, 0, bias=False),
+            nn.ConvTranspose2d(nz, ngf * 8, 4, 1, 0, bias=False),
             nn.BatchNorm2d(ngf * 8),
             nn.ReLU(True),
             # state size. (ngf*8) x 4 x 4
@@ -71,27 +71,27 @@ class ImDiscriminator(nn.Module):
 
 class PokeGenerator(nn.Module):
     #https://github.com/Zhenye-Na/pokemon-gan/blob/master/Pytorch/model/model.py
-    def __init__(self, ngpu):
+    def __init__(self, ngpu, nc, nz, ngf):
         super(PokeGenerator, self).__init__()
 
         self.conv = nn.Sequential(
-            nn.ConvTranspose2d(in_channels=64, out_channels=192, kernel_size=3, stride=1, padding=2),
-            nn.BatchNorm2d(192),
+            nn.ConvTranspose2d(in_channels=nz, out_channels=ngf*8, kernel_size=3, stride=1, padding=2),
+            nn.BatchNorm2d(ngf*8),
             nn.ReLU(inplace=True),
 
-            nn.ConvTranspose2d(in_channels=192, out_channels=96, kernel_size=3, stride=1, padding=2),
-            nn.BatchNorm2d(96),
+            nn.ConvTranspose2d(in_channels=ngf*8, out_channels=ngf*4, kernel_size=3, stride=1, padding=2),
+            nn.BatchNorm2d(ngf*4),
             nn.ReLU(inplace=True),
 
-            nn.ConvTranspose2d(in_channels=96, out_channels=48, kernel_size=3, stride=1, padding=2),
-            nn.BatchNorm2d(48),
+            nn.ConvTranspose2d(in_channels=ngf*4, out_channels=ngf*2, kernel_size=3, stride=1, padding=2),
+            nn.BatchNorm2d(ngf*2),
             nn.ReLU(inplace=True),
 
-            nn.ConvTranspose2d(in_channels=48, out_channels=24, kernel_size=3, stride=1, padding=2),
-            nn.BatchNorm2d(24),
+            nn.ConvTranspose2d(in_channels=ngf*2, out_channels=ngf, kernel_size=3, stride=1, padding=2),
+            nn.BatchNorm2d(ngf),
             nn.ReLU(inplace=True),
 
-            nn.ConvTranspose2d(in_channels=24, out_channels=3, kernel_size=3, stride=1, padding=2),
+            nn.ConvTranspose2d(in_channels=ngf, out_channels=nc, kernel_size=3, stride=1, padding=2),
             nn.BatchNorm2d(3),
             nn.ReLU(inplace=True),
 
@@ -99,7 +99,7 @@ class PokeGenerator(nn.Module):
 
         self.fc_net = nn.Sequential(
             nn.Dropout(),
-            nn.Linear(3 * (96 * 96), 3),
+            nn.Linear(nc * (ngf * ngf), nc),
             nn.ReLU(inplace=True),
             nn.Linear(3, 1)
         )
@@ -113,24 +113,27 @@ class PokeGenerator(nn.Module):
 
 
 class PokeDiscriminator(nn.Module):
-    def __init__(self, ngpu):
+    def __init__(self, ngpu, nc, ndf):
         super(PokeDiscriminator, self).__init__()
         self.ngpu = ngpu
         self.conv = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=24, kernel_size=3, stride=1, padding=2),
-            nn.BatchNorm2d(24),
+            nn.Conv2d(in_channels=nc, out_channels=ndf, kernel_size=3, stride=1, padding=2),
+            nn.LeakyReLU(inplace=True),
+            
+            nn.Conv2d(in_channels=ndf, out_channels=ndf*2, kernel_size=3, stride=1, padding=2),
+            nn.BatchNorm2d(ndf*2),
             nn.LeakyReLU(inplace=True),
 
-            nn.Conv2d(in_channels=24, out_channels=48, kernel_size=3, stride=1, padding=2),
-            nn.BatchNorm2d(48),
+            nn.Conv2d(in_channels=ndf*2, out_channels=ndf*4, kernel_size=3, stride=1, padding=2),
+            nn.BatchNorm2d(ndf*4),
             nn.LeakyReLU(inplace=True),
 
-            nn.Conv2d(in_channels=48, out_channels=96, kernel_size=3, stride=1, padding=2),
-            nn.BatchNorm2d(96),
+            nn.Conv2d(in_channels=ndf*4, out_channels=ndf*8, kernel_size=3, stride=1, padding=2),
+            nn.BatchNorm2d(ndf*8),
             nn.LeakyReLU(inplace=True),
 
-            nn.Conv2d(in_channels=96, out_channels=192, kernel_size=3, stride=1, padding=2),
-            nn.BatchNorm2d(192),
+            nn.Conv2d(in_channels=ndf*8, out_channels=1, kernel_size=3, stride=1, padding=2),
+            nn.BatchNorm2d(1),
             nn.LeakyReLU(inplace=True)
         )
 
@@ -144,7 +147,7 @@ class PokeDiscriminator(nn.Module):
     def forward(self, input):
         input = self.conv(input)
         input = input.view(input.size(0), -1)
-        input = self.fc_net(input)
+        #input = self.fc_net(input)
         return input
 
 # custom weights initialization called on netG and netD
