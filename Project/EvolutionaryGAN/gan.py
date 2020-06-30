@@ -1,31 +1,23 @@
 import os
 import torch
 import torch.optim as optim
-import torch.nn as nn
-from torch.tensor import Tensor
-from torch.autograd import Variable
-from torchvision.utils import save_image
-import matplotlib.pyplot as plt
-import numpy as np
-from abc import ABCMeta, abstractmethod
-
-from nets import DCGANGenerator, DCGANDiscriminator, weights_init_DCGAN, ToyGenerator, ToyDiscriminator, weighs_init_toy, WassersteinDiscriminator, WassersteinGenerator
-from data import toy_dataset, image_dataset, mnist_dataset
-from utils import sample_noise, save_kde
-from gen_losses import Minmax, Heuristic, LeastSquares
-from simdata import save_sample, extract_xy, EightInCircle, Grid, StandardGaussian, SimulatedDistribution
+from nets import *
+from data import *
+from utils import *
+from gen_losses import *
+from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, extract_xy
 from discr_loss import DiscriminatorLoss
 
 
 class Options():
     def __init__(self, ngpu=0):
-        self.num_epochs = 20
-        self.ngpu = 0
-        self.lr = 1e-03
+        self.num_epochs = 100
+        self.ngpu = 1
+        self.lr = 1e-4
         self.beta1 = 0.5
         self.beta2 = 0.999
         self.g_loss = 1
-        self.batch_size = 50
+        self.batch_size = 64
         self.workers = 1
         self.device = torch.device("cuda:0" if (torch.cuda.is_available() and self.ngpu > 0) else "cpu")
 
@@ -34,9 +26,9 @@ class ToyOptions(Options):
     def __init__(self, ngpu=0):
         super().__init__(ngpu=ngpu)
         self.toy_type = 1
-        self.toy_std = 0.2
+        self.toy_std = 0.05
         self.toy_scale = 2.0
-        self.toy_len = 50*self.batch_size
+        self.toy_len = 500*self.batch_size
 
 
 class CelebOptions(Options):
@@ -84,7 +76,6 @@ class GAN():
         # Lists to keep track of progress
         self.d_losses = []
         self.g_losses = []
-        self.g_sample_loglike = []
 
         # Initialize Discriminator and generator loss functions
         self.d_loss = self.create_d_loss()
@@ -95,6 +86,7 @@ class GAN():
         self.g_optimizer = self.create_g_optimizer(opt)
 
         self.dataset = self.create_dataset()
+        self.data_loader = self.create_data_loader()
 
 
     # Subclasses should implement the methods below and return the corresponding objects
@@ -149,12 +141,36 @@ class GAN():
     def create_dataset(self):
         raise NotImplementedError
 
+    """Defines and a dataloader
+    """
+    @abstractmethod
+    def create_data_loader(self):
+        raise NotImplementedError
+
     """Saves a generated sample at a specified path
        Parameters:
           path - where to save a sample
     """
     @abstractmethod
-    def save_gen_sample_func(self, path):
+    def save_gen_sample(self, path):
+        raise NotImplementedError
+
+    """Runs evaluation metrics specific to GAN
+       Parameters:
+           fake_sample - a sample for generator on fixed noise
+           real_sample - a fixed real sample
+    """
+    @abstractmethod
+    def evaluate(self, fake_sample, real_sample):
+        raise NotImplementedError
+
+    """Saves statistics specific to GAN
+       Parameters:
+            fake_sample - a sample for generator on fixed noise
+            real_sample - a fixed real sample
+    """
+    @abstractmethod
+    def save_statistics(self, fake_sample):
         raise NotImplementedError
 
     """Performs discriminator training step on a batch of real and fake samples
@@ -163,7 +179,6 @@ class GAN():
            fake_sample - a batch of generated samples
            real_sample - a batch of real samples
     """
-
     def train_discriminator(self, fake_sample, real_sample):
         self.d_optimizer.zero_grad()
         real_prediction = self.discriminator(real_sample)
@@ -182,7 +197,6 @@ class GAN():
            model - an instance of GAN class which defines GAN objects
            fake_sample - a batch of generated samples
     """
-
     def train_generator(self, fake_sample):
         self.g_optimizer.zero_grad()
         # Since we just updated D, perform another forward pass of all-fake batch through D
@@ -202,15 +216,16 @@ class GAN():
         except FileExistsError:
             pass
 
-        fixed_noise = sample_noise(10000)
-        fixed_noise_ll = sample_noise(500)
+        eval_sample_size = 10000
+        fixed_noise = sample_noise(eval_sample_size)
+        real_sample_fixed = self.dataset.distribution.sample(eval_sample_size)
         num_epochs = self.opt.num_epochs
         print("Starting Training Loop...")
-        steps_per_epoch = int(np.floor(len(self.dataset) / self.opt.batch_size))
+        steps_per_epoch = int(np.floor(len(self.data_loader) / self.opt.batch_size))
         for epoch in range(num_epochs):
             # For each batch in the dataloader
             iter = 0
-            for i, real_sample in enumerate(self.dataset, 0):
+            for i, real_sample in enumerate(self.data_loader, 0):
                 ############################
                 # (1) Update Discriminator network
                 ###########################
@@ -226,58 +241,29 @@ class GAN():
 
                 g_loss, fake_out2 = self.train_generator(fake_sample)
                 self.g_losses.append(g_loss)
-
-                # save fake sample log likelihood
-                with torch.no_grad():
-                    fake_fixed_ll = self.generator(fixed_noise_ll)
-                fake_shape_ll = fake_fixed_ll.shape
-                fake_sample_fixed_ll = fake_fixed_ll.reshape((fake_shape_ll[0], fake_shape_ll[2])).numpy()
-
-                self.g_sample_loglike.append(self.target_distr().likelihood_of(fake_sample_fixed_ll))
-
-                # Output training stats
                 iter += 1
 
                 # Each few iterations we plot statistics with current discriminator loss, generator loss,
                 # mean of discriminator prediction for real sample,
                 # mean of discriminator prediction for fake sample before discriminator was trained,
                 # mean of discriminator prediction for fake sample after discriminator was trained,
-                if iter % 50 == 0:
+                if iter % 250 == 0:
                     print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
                           % (epoch+1, num_epochs, iter, steps_per_epoch,
                              d_loss, g_loss, real_out.mean().item(), fake_out.mean().item(), fake_out2.mean().item()))
 
-            # save fake sample log likelihood
+            # After each epoch we save global statistics
+            # Sample from generator with fixed noise
             with torch.no_grad():
                 fake_fixed = self.generator(fixed_noise)
             fake_shape = fake_fixed.shape
             fake_sample_fixed = fake_fixed.reshape((fake_shape[0], fake_shape[2])).numpy()
 
-            # Check how the generator is doing by saving G's output on fixed_noise
-            # I moved it to the end of epoch, but it can be done based on iter value too
-            self.save_gen_sample(fake_sample_fixed,
-                                "{}epoch {}.png".format(results_folder, epoch + 1))
+            # Check how the generator is doing by saving its output on fixed_noise
+            self.save_gen_sample(fake_sample_fixed, epoch, results_folder)
 
-            print("Sample log likelihood {}".format(self.target_distr().likelihood_of(fake_sample_fixed_ll)))
-            # gan.write_to_writer(fake.reshape((fake_shape[0], fake_shape[2])).numpy(),
-            #                    "epoch {}".format(epoch+1), writer, epoch)
-
-        # Save generator's sample KDE at the end of training
-        fake = self.generator(fixed_noise).reshape((fake_shape[0], fake_shape[2])).detach().numpy()
-        # will fail for image GAN
-        save_kde(fake, self.target_distr(), results_folder)
-
-        # Save fake sample log likelihood in case we want to use it later
-        with open("{}fs_ll.npy".format(results_folder), 'wb') as f:
-            np.save(f, np.array(self.g_sample_loglike))
-
-        # Save fake sample log likelihood plot
-        plt.figure(figsize=(10, 5))
-        plt.title("Fake sample log likelihood")
-        plt.plot(self.g_sample_loglike)
-        plt.xlabel("iterations")
-        plt.ylabel("Log likelohood")
-        plt.savefig("{}Fake log likelihood.png".format(results_folder))
+            # Calculate and save evaluation metrics
+            self.evaluate(fake_sample_fixed, real_sample_fixed)
 
         # Losses statistics
         plt.figure(figsize=(10, 5))
@@ -289,8 +275,21 @@ class GAN():
         plt.legend()
         plt.savefig("{}train_summary.png".format(results_folder))
 
+        # At the end of training save final stats on fake sample
+        fake_fixed = self.generator(fixed_noise).reshape((fake_shape[0], fake_shape[2])).detach().numpy()
+        self.save_statistics(fake_fixed, results_folder)
+
 
 class ToyGAN(GAN):
+    def __init__(self, opt):
+        super().__init__(opt)
+        # Toy data evaluation metrics statistics
+        self.data_log_likelihoods = []
+        self.hq_percentage = []
+        self.stdev_x = []
+        self.stdev_y = []
+        self.js_divergence = []
+
     def create_discriminator(self):
         return ToyDiscriminator()
 
@@ -301,31 +300,110 @@ class ToyGAN(GAN):
         return weighs_init_toy
 
     def create_dataset(self):
-        return toy_dataset(self.opt)
+        return MixtureOfGaussiansDataset(SimulatedDistribution(self.opt.toy_type),
+                                         self.opt.toy_std,
+                                         self.opt.toy_scale,
+                                         self.opt.toy_len)
 
-    def save_gen_sample(self, sample, path):
-        save_sample(sample, path)
-    
+    def create_data_loader(self):
+        return torch.utils.data.DataLoader(self.dataset,
+                                           batch_size=self.opt.batch_size,
+                                           num_workers=self.opt.workers)
+
+    def save_gen_sample(self, sample, epoch, out_dir):
+        path = "{}epoch {}.png".format(out_dir, epoch + 1)
+        x, y = extract_xy(sample)
+        modes_x, modes_y = extract_xy(self.dataset.distribution.centers())
+
+        plt.figure()
+        plt.scatter(x, y, s=1.5)
+        plt.scatter(modes_x, modes_y, s=30, marker="D")
+        plt.savefig(path)
+        plt.close()
+
     def write_to_writer(self, sample, title, writer, epoch):
         x, y = extract_xy(sample)
         fig = plt.figure()
         fig.scatter(x, y, s=1.5)
         writer.add_figure(title, fig, global_step=epoch)
 
-    # For KDE plot. A better way to do it might exist but I haven't found one
-    def target_distr(self):
-        distribution = SimulatedDistribution(self.opt.toy_type)
-        if distribution == SimulatedDistribution.eight_gaussians:
-            return EightInCircle(stdev=self.opt.toy_std, scale=self.opt.toy_scale)
-        elif distribution == SimulatedDistribution.twenty_five_gaussians:
-            return Grid(stdev=self.opt.toy_std, scale=self.opt.toy_scale)
-        elif distribution == SimulatedDistribution.standard_gaussian:
-            return StandardGaussian(stdev=self.opt.toy_std, scale=self.opt.toy_scale)
-        else:
-            raise ValueError
+    def evaluate(self, fake_sample, real_sample):
+        # Obtain fixed real data log likelihood estimate based on KDE from fake sample
+        real_data_ll = data_log_likelihood(fake_sample, real_sample, self.dataset.distribution.stdev)
+        self.data_log_likelihoods.append(real_data_ll)
+
+        # Obtain sample quality statistics
+        hq_percentage, stdev, js_diver = self.dataset.distribution.measure_sample_quality(fake_sample)
+        self.hq_percentage.append(hq_percentage)
+        self.stdev_x.append(stdev[0])
+        self.stdev_y.append(stdev[1])
+        self.js_divergence.append(js_diver)
+
+    def save_statistics(self, fake_sample, results_folder):
+        # will fail for image GAN
+        save_kde(fake_sample, self.dataset.distribution, results_folder, "test")
+
+        # Save fake sample log likelihood in case we want to use it later
+        with open("{}fs_ll.npy".format(results_folder), 'wb') as f:
+            np.save(f, np.array(self.data_log_likelihoods))
+
+        # Save fake sample log likelihood plot
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.data_log_likelihoods)
+        plt.xlabel("Epoch")
+        plt.ylabel("Data log likelohood")
+        plt.savefig("{}Real log likelihood.png".format(results_folder))
+
+        # Save fake sample log likelihood in case we want to use it later
+        with open("{}hq_rate.npy".format(results_folder), 'wb') as f:
+            np.save(f, np.array(self.hq_percentage))
+
+        # Save high quality rate plot
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.hq_percentage)
+        plt.axhline(y=1, color='tab:red')
+        plt.xlabel("Epoch")
+        plt.ylabel("High quality rate")
+        plt.savefig("{}hq_rate.png".format(results_folder))
+
+        # Save generated sample x stdev in case we want to use it later
+        with open("{}x_stdev.npy".format(results_folder), 'wb') as f:
+            np.save(f, np.array(self.stdev_x))
+
+        # Save high quality rate plot
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.stdev_x)
+        plt.axhline(y=self.dataset.distribution.stdev, color='tab:red')
+        plt.xlabel("Epoch")
+        plt.ylabel("X standard deviation")
+        plt.savefig("{}x_stdev.png".format(results_folder))
+
+        # Save generated sample y stdev in case we want to use it later
+        with open("{}y_stdev.npy".format(results_folder), 'wb') as f:
+            np.save(f, np.array(self.stdev_x))
+
+        # Save high quality rate plot
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.stdev_y)
+        plt.axhline(y=self.dataset.distribution.stdev, color='tab:red')
+        plt.xlabel("Epoch")
+        plt.ylabel("Y standard deviation")
+        plt.savefig("{}y_stdev.png".format(results_folder))
+
+        # Save generated sample JS-divergence in case we want to use it later
+        with open("{}jsd.npy".format(results_folder), 'wb') as f:
+            np.save(f, np.array(self.js_divergence))
+
+        # Save high quality rate plot
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.js_divergence)
+        plt.axhline(y=0, color='tab:red')
+        plt.xlabel("Epoch")
+        plt.ylabel("JSD(nats)")
+        plt.savefig("{}jsd.png".format(results_folder))
 
 
-class DCGAN(GAN):
+class CelebGAN(GAN):
     def __init__(self, opt):
         super().__init__(opt)
         self.img_list = []
@@ -342,7 +420,19 @@ class DCGAN(GAN):
     def create_dataset(self):
         return image_dataset(self.opt)
 
-    def save_gen_sample(self, sample, path):
+    def create_data_loader(self):
+        return torch.utils.data.DataLoader(self.dataset,
+                                           batch_size=self.opt.batch_size,
+                                           shuffle=True,
+                                           num_workers=self.opt.workers)
+
+    def evaluate(self, fake_sample, real_sample):
+        pass
+
+    def save_statistics(self, fake_sample):
+        pass
+
+    def save_gen_sample(self, sample, epoch, out_dir):
         plt.figure()
         plt.imshow(sample)
         plt.savefig(path)

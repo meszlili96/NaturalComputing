@@ -23,6 +23,8 @@ def image_dataset(opt):
                                    transforms.ToTensor(),
                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
                                ]))
+
+    return dataset
     # Create the dataloader
     dataloader = DataLoader(dataset, batch_size=opt.batch_size,
                                              shuffle=True, num_workers=opt.workers)
