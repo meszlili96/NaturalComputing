@@ -144,6 +144,15 @@ class EGAN():
     def save_statistics(self, fake_sample):
         raise NotImplementedError
 
+    """Returns real sample of the dataset
+       Parameters:
+            eval_sample_size - size of sample to be provided
+            real_sample - a sample of the real data set of size eval_sample_size
+    """
+    @abstractmethod
+    def real_sample(self, eval_sample_size):
+        raise NotImplementedError
+
     """Performs discriminator training step on a batch of real and fake samples
        Parameters:
            model - an instance of GAN class which defines GAN objects
@@ -195,7 +204,7 @@ class EGAN():
         eval_sample_size = 10000
         fitness_sample_size = 1024
         fixed_noise = sample_noise(eval_sample_size)
-        real_sample_fixed = self.dataset.distribution.sample(eval_sample_size)
+        real_sample_fixed = self.real_sample(eval_sample_size)
         num_epochs = self.opt.num_epochs
         print("Starting Training Loop...")
         steps_per_epoch = int(np.floor(len(self.data_loader) / self.opt.batch_size))
@@ -363,6 +372,9 @@ class ToyEGAN(EGAN):
         self.stdev_x.append(stdev[0])
         self.stdev_y.append(stdev[1])
         self.js_divergence.append(js_diver)
+
+    def real_sample(self, eval_sample_size):
+        return self.dataset.distribution.sample(eval_sample_size)
 
     def save_statistics(self, fake_sample, results_folder):
         # will fail for image GAN
