@@ -483,7 +483,7 @@ class PokeEGAN(EGAN):
         pass
 
     def sample_noise(self, size):  #size is nz here
-        fixed_noise = torch.randn(64, size, 1, 1, device=device)
+        fixed_noise = torch.randn(64, size, 1, 1)
         return fixed_noise
 
     def save_statistics(self, fake_sample):
