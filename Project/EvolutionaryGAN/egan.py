@@ -152,6 +152,15 @@ class EGAN():
     @abstractmethod
     def real_sample(self, eval_sample_size):
         raise NotImplementedError
+    
+    """Sample noise of certain size
+       Parameters:
+            size - size of sample to be provided
+            noise_sample - a sample of the noise of size
+    """
+    @abstractmethod
+    def sample_noise(self, size):
+        raise NotImplementedError
 
     """Performs discriminator training step on a batch of real and fake samples
        Parameters:
@@ -203,7 +212,7 @@ class EGAN():
 
         eval_sample_size = 10000
         fitness_sample_size = 1024
-        fixed_noise = sample_noise(eval_sample_size)
+        fixed_noise = self.sample_noise(eval_sample_size)
         real_sample_fixed = self.real_sample(eval_sample_size)
         num_epochs = self.opt.num_epochs
         print("Starting Training Loop...")
@@ -218,7 +227,7 @@ class EGAN():
                 for param in self.discriminator.parameters():
                     param.requires_grad = True
 
-                fake_sample = self.generator(sample_noise(self.opt.batch_size)).detach()
+                fake_sample = self.generator(self.sample_noise(self.opt.batch_size)).detach()
                 d_loss, real_out, fake_out = self.train_discriminator(fake_sample,
                                                                       real_sample.float())
                 self.d_losses.append(d_loss)
@@ -237,7 +246,7 @@ class EGAN():
                 fake_out_2_list = []
 
                 # Generate noise to evaluate on before and after training step, same for each offspring
-                noise = sample_noise(self.opt.batch_size)
+                noise = self.sample_noise(self.opt.batch_size)
                 # Evolutionary part. Enumerate through mutations (loss functions)
                 for _, loss in enumerate(self.g_losses_list):
                     # Copy the parameters of candidate generator and generator's optimiser
@@ -245,14 +254,14 @@ class EGAN():
                     self.g_optimizer.load_state_dict(self.opt_g_previous)
 
                     # Train the current generator
-                    fake_sample = self.generator(sample_noise(self.opt.batch_size))
+                    fake_sample = self.generator(self.sample_noise(self.opt.batch_size))
                     g_loss, fake_out2 = self.train_generator(loss, fake_sample)
                     cand_losses_list.append(g_loss)
                     fake_out_2_list.append(fake_out2.mean().item())
 
                     # Compute fitness score on a sample after training
                     with torch.no_grad():
-                        fake_sample_trained = self.generator(sample_noise(fitness_sample_size))
+                        fake_sample_trained = self.generator(self.sample_noise(fitness_sample_size))
 
                     f_q, f_d = egan_fitness(self.discriminator, self.d_loss, fake_sample_trained, real_sample.float())
                     fitness_score = f_q + self.gamma*f_d
@@ -376,6 +385,10 @@ class ToyEGAN(EGAN):
     def real_sample(self, eval_sample_size):
         return self.dataset.distribution.sample(eval_sample_size)
 
+    def sample_noise(self, size):
+        noise = -1 * torch.rand(size, 2) + 0.5
+        return noise
+    
     def save_statistics(self, fake_sample, results_folder):
         # will fail for image GAN
         save_kde(fake_sample, self.dataset.distribution, results_folder, "test")
@@ -468,6 +481,10 @@ class PokeEGAN(EGAN):
 
     def real_sample(self, eval_sample_size):
         pass
+
+    def sample_noise(self, size):  #size is nz here
+        fixed_noise = torch.randn(64, size, 1, 1, device=device)
+        return fixed_noise
 
     def save_statistics(self, fake_sample):
         pass

@@ -107,7 +107,7 @@ class PokeGenerator(nn.Module):
     def forward(self, input):
         input = self.conv(input)
         input = input.view(input.size(0), -1)
-        input = self.fc_net(input)
+        #input = self.fc_net(input)
         return input
 
 

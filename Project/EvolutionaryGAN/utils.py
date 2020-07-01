@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 
 """Samples noise from unifrom distribution for Generator
 """
-def sample_noise(size):
-    noise = -1 * torch.rand(size, 2) + 0.5
-    return noise
+#def sample_noise(size):
+#    noise = -1 * torch.rand(size, 2) + 0.5
+#    return noise
 
 
 """ Estimates KDE for a sample
