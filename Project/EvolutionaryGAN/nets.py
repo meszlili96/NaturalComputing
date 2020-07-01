@@ -92,7 +92,7 @@ class PokeGenerator(nn.Module):
             nn.ReLU(inplace=True),
 
             nn.ConvTranspose2d(in_channels=ngf, out_channels=nc, kernel_size=3, stride=1, padding=2),
-            nn.BatchNorm2d(3),
+            nn.BatchNorm2d(nc),
             nn.ReLU(inplace=True),
 
         )
@@ -106,7 +106,7 @@ class PokeGenerator(nn.Module):
 
     def forward(self, input):
         input = self.conv(input)
-        input = input.view(input.size(0), -1)
+        #input = input.view(input.size(0), -1)
         #input = self.fc_net(input)
         return input
 
@@ -146,7 +146,7 @@ class PokeDiscriminator(nn.Module):
 
     def forward(self, input):
         input = self.conv(input)
-        input = input.view(input.size(0), -1)
+        ##input = input.view(input.size(0), -1)
         #input = self.fc_net(input)
         return input
 
