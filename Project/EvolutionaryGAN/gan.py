@@ -368,7 +368,7 @@ class ToyGAN(GAN):
 
         # Save generated sample y stdev in case we want to use it later
         with open("{}y_stdev.npy".format(results_folder), 'wb') as f:
-            np.save(f, np.array(self.stdev_x))
+            np.save(f, np.array(self.stdev_y))
 
         # Save high quality rate plot
         plt.figure(figsize=(10, 5))
