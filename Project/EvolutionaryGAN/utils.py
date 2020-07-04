@@ -5,21 +5,12 @@ from sklearn.neighbors import KernelDensity
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import LeaveOneOut
 import matplotlib.pyplot as plt
-from simdata import extract_xy
 
 """Samples noise from unifrom distribution for Generator
 """
 def sample_noise(size):
     noise = -1 * torch.rand(size, 2) + 0.5
     return noise
-
-def save_sample(sample, img_name):
-    x, y = extract_xy(sample)
-
-    plt.figure()
-    plt.scatter(x, y, s=1.5)
-    plt.savefig(img_name)
-    plt.close()
 
 """ Estimates KDE for a sample
     Parameters:

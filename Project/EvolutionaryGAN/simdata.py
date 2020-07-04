@@ -52,6 +52,13 @@ def extract_xy(sample):
 
     return x, y
 
+def save_sample(sample, img_name):
+    x, y = extract_xy(sample)
+
+    plt.figure()
+    plt.scatter(x, y, s=1.5)
+    plt.savefig(img_name)
+    plt.close()
 
 # abstract class which defines mixture of Gaussians distribution
 class MixtureOfGaussians:

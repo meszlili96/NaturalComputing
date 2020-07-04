@@ -9,8 +9,8 @@ def main():
     #writer = SummaryWriter('runs/test')
     opt = Parser().parse()
     # Set up your model here
-    gan = ToyGAN(opt)
-    #gan = WGAN(opt)
+    #gan = ToyGAN(opt)
+    gan = WGAN(opt)
     gan.train(results_folder, None)
 
 if __name__ == '__main__':
