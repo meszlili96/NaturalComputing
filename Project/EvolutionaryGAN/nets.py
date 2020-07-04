@@ -76,24 +76,24 @@ class PokeGenerator(nn.Module):
         super(PokeGenerator, self).__init__()
 
         self.conv = nn.Sequential(
-            nn.ConvTranspose2d(in_channels=nz, out_channels=ngf*8, kernel_size=3, stride=1, padding=2),
+            nn.ConvTranspose2d(in_channels=nz, out_channels=ngf*8, kernel_size=4, stride=1, padding=0),
             nn.BatchNorm2d(ngf*8),
             nn.ReLU(inplace=True),
 
-            nn.ConvTranspose2d(in_channels=ngf*8, out_channels=ngf*4, kernel_size=3, stride=1, padding=2),
+            nn.ConvTranspose2d(in_channels=ngf*8, out_channels=ngf*4, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm2d(ngf*4),
             nn.ReLU(inplace=True),
 
-            nn.ConvTranspose2d(in_channels=ngf*4, out_channels=ngf*2, kernel_size=3, stride=1, padding=2),
+            nn.ConvTranspose2d(in_channels=ngf*4, out_channels=ngf*2, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm2d(ngf*2),
             nn.ReLU(inplace=True),
 
-            nn.ConvTranspose2d(in_channels=ngf*2, out_channels=ngf, kernel_size=3, stride=1, padding=2),
+            nn.ConvTranspose2d(in_channels=ngf*2, out_channels=ngf, kernel_size=4, stride=2, padding=1),
             nn.BatchNorm2d(ngf),
             nn.ReLU(inplace=True),
 
-            nn.ConvTranspose2d(in_channels=ngf, out_channels=nc, kernel_size=3, stride=1, padding=2),
-            nn.BatchNorm2d(3),
+            nn.ConvTranspose2d(in_channels=ngf, out_channels=nc, kernel_size=4, stride=2, padding=1),
+            nn.BatchNorm2d(nc),
             nn.ReLU(inplace=True),
 
         )
@@ -107,8 +107,8 @@ class PokeGenerator(nn.Module):
 
     def forward(self, input):
         input = self.conv(input)
-        input = input.view(input.size(0), -1)
-        input = self.fc_net(input)
+        #input = input.view(input.size(0), -1)
+        #input = self.fc_net(input)
         return input
 
 
@@ -118,22 +118,22 @@ class PokeDiscriminator(nn.Module):
         super(PokeDiscriminator, self).__init__()
         self.ngpu = ngpu
         self.conv = nn.Sequential(
-            nn.Conv2d(in_channels=nc, out_channels=ndf, kernel_size=3, stride=1, padding=2),
+            nn.Conv2d(in_channels=nc, out_channels=ndf, kernel_size=3, stride=2, padding=1),
             nn.LeakyReLU(inplace=True),
             
-            nn.Conv2d(in_channels=ndf, out_channels=ndf*2, kernel_size=3, stride=1, padding=2),
+            nn.Conv2d(in_channels=ndf, out_channels=ndf*2, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(ndf*2),
             nn.LeakyReLU(inplace=True),
 
-            nn.Conv2d(in_channels=ndf*2, out_channels=ndf*4, kernel_size=3, stride=1, padding=2),
+            nn.Conv2d(in_channels=ndf*2, out_channels=ndf*4, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(ndf*4),
             nn.LeakyReLU(inplace=True),
 
-            nn.Conv2d(in_channels=ndf*4, out_channels=ndf*8, kernel_size=3, stride=1, padding=2),
+            nn.Conv2d(in_channels=ndf*4, out_channels=ndf*8, kernel_size=3, stride=2, padding=1),
             nn.BatchNorm2d(ndf*8),
             nn.LeakyReLU(inplace=True),
 
-            nn.Conv2d(in_channels=ndf*8, out_channels=1, kernel_size=3, stride=1, padding=2),
+            nn.Conv2d(in_channels=ndf*8, out_channels=1, kernel_size=3, stride=1, padding=0),
             nn.BatchNorm2d(1),
             nn.LeakyReLU(inplace=True)
         )
@@ -147,7 +147,7 @@ class PokeDiscriminator(nn.Module):
 
     def forward(self, input):
         input = self.conv(input)
-        input = input.view(input.size(0), -1)
+        ##input = input.view(input.size(0), -1)
         #input = self.fc_net(input)
         return input
 

@@ -231,7 +231,7 @@ class GAN():
                 ###########################
                 fake_sample = self.generator(sample_noise(self.opt.batch_size)).detach()
                 d_loss, real_out, fake_out = self.train_discriminator(fake_sample,
-                                                                      real_sample.float())
+                                                                      real_sample)
                 self.d_losses.append(d_loss)
 
                 ############################
@@ -380,7 +380,7 @@ class ToyGAN(GAN):
 
         # Save generated sample y stdev in case we want to use it later
         with open("{}y_stdev.npy".format(results_folder), 'wb') as f:
-            np.save(f, np.array(self.stdev_x))
+            np.save(f, np.array(self.stdev_y))
 
         # Save high quality rate plot
         plt.figure(figsize=(10, 5))
