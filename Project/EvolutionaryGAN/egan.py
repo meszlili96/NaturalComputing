@@ -247,7 +247,7 @@ class EGAN():
 
                 fake_sample = self.generator(self.sample_noise(self.opt.batch_size)).detach()
                 d_loss, real_out, fake_out = self.train_discriminator(fake_sample,
-                                                                      real_sample.float())
+                                                                      real_sample)
                 self.d_losses.append(d_loss)
 
                 ############################
@@ -281,7 +281,7 @@ class EGAN():
                     with torch.no_grad():
                         fake_sample_trained = self.generator(self.sample_noise(fitness_sample_size))
 
-                    f_q, f_d = egan_fitness(self.discriminator, self.d_loss, fake_sample_trained, real_sample.float())
+                    f_q, f_d = egan_fitness(self.discriminator, self.d_loss, fake_sample_trained, real_sample)
                     fitness_score = f_q + self.gamma*f_d
                     F_scores.append(fitness_score)
 

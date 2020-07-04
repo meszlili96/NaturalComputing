@@ -219,7 +219,7 @@ class GAN():
                 ###########################
                 fake_sample = self.generator(sample_noise(self.opt.batch_size)).detach()
                 d_loss, real_out, fake_out = self.train_discriminator(fake_sample,
-                                                                      real_sample.float())
+                                                                      real_sample)
                 self.d_losses.append(d_loss)
 
                 ############################
