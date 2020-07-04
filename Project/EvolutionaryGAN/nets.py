@@ -7,6 +7,7 @@ import torch.utils.data
 import torchvision.datasets as dset
 import torchvision.transforms as transforms
 import torchvision.utils as vutils
+import torch.nn.functional as F
 
 
 class ImGenerator(nn.Module):
@@ -67,7 +68,63 @@ class ImDiscriminator(nn.Module):
     def forward(self, input):
         return self.main(input)
 
+class MNISTGenerator(nn.Module):
+    def __init__(self, input_size, hidden_dim, output_size):
+        super(MNISTGenerator, self).__init__()
+ 
+        # 1
+        self.fc1 = nn.Linear(input_size, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim*2)
+        self.fc3 = nn.Linear(hidden_dim*2, hidden_dim*4)
+ 
+        # 2
+        self.fc4 = nn.Linear(hidden_dim*4, output_size)
+ 
+        # 3
+        self.dropout = nn.Dropout(0.3)
 
+    def forward(self, x):
+        # 4
+        x = F.leaky_relu(self.fc1(x), 0.2) # (input, negative_slope=0.2)
+        x = self.dropout(x)
+        x = F.leaky_relu(self.fc2(x), 0.2)
+        x = self.dropout(x)
+        x = F.leaky_relu(self.fc3(x), 0.2)
+        x = self.dropout(x)
+        # 5
+        out = F.tanh(self.fc4(x))
+        return out
+
+class MNISTDiscriminator(nn.Module):
+    #https://medium.com/intel-student-ambassadors/mnist-gan-detailed-step-by-step-explanation-implementation-in-code-ecc93b22dc60
+    def __init__(self, input_size, hidden_dim, output_size):
+        super(MNISTDiscriminator, self).__init__()
+ 
+        # 1
+        self.fc1 = nn.Linear(input_size, hidden_dim*4)
+        self.fc2 = nn.Linear(hidden_dim*4, hidden_dim*2)
+        self.fc3 = nn.Linear(hidden_dim*2, hidden_dim)
+ 
+        # 2
+        self.fc4 = nn.Linear(hidden_dim, output_size)
+ 
+        # dropout layer 
+        self.dropout = nn.Dropout(0.3)
+ 
+ 
+    def forward(self, x):
+        #3 
+        x = x.view(-1, 28*28)
+        #4 
+        x = F.leaky_relu(self.fc1(x), 0.2) # (input, negative_slope=0.2)
+        x = self.dropout(x)
+        x = F.leaky_relu(self.fc2(x), 0.2)
+        x = self.dropout(x)
+        x = F.leaky_relu(self.fc3(x), 0.2)
+        x = self.dropout(x)
+        # 5
+        out = self.fc4(x)
+        return out
 
 class PokeGenerator(nn.Module):
     #https://github.com/Zhenye-Na/pokemon-gan/blob/master/Pytorch/model/model.py
