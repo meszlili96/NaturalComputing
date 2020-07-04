@@ -81,7 +81,7 @@ class MixtureOfGaussians:
             point = np.random.multivariate_normal(mu, cov)
             dataset.append(point)
 
-        return np.array(dataset)
+        return np.array(dataset, np.float32)
 
     # generate a stream of data in batches
     def data_generator(self, batch_size=1):
