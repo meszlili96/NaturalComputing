@@ -221,17 +221,22 @@ class EGAN():
         self.g_optimizer.step()
         return g_loss.item(), d_output
 
-    def train(self, results_folder):
+    def train(self, results_folder, im_set):
         # Create results directory
         try:
             os.mkdir(results_folder)
         except FileExistsError:
             pass
-
         eval_sample_size = 10000
         fitness_sample_size = 1024
         fixed_noise = self.sample_noise(eval_sample_size)
         real_sample_fixed = self.real_sample(eval_sample_size)
+        
+        ## for testing save function
+        fake_sample_fixed = self.generator(fixed_noise)
+        self.save_gen_sample(fake_sample_fixed, 0, results_folder)
+        ## end of testing save function
+        
         num_epochs = self.opt.num_epochs
         print("Starting Training Loop...")
         steps_per_epoch = int(np.floor(len(self.data_loader) / self.opt.batch_size))
@@ -239,6 +244,12 @@ class EGAN():
             iter = 0
             # For each batch in the dataloader
             for i, real_sample in enumerate(self.data_loader, 0):
+                ############################
+                # If it is an image dataset, the data_loader needs to be handled differently, and transformation is needed
+                ###########################
+                if im_set:
+                    real_sample = real_sample[0]
+                    real_sample = real_sample*2 -1
                 ############################
                 # (1) Update Discriminator network
                 ###########################
@@ -318,11 +329,13 @@ class EGAN():
 
             # After each epoch we save global statistics
             # Sample from generator with fixed noise
-            with torch.no_grad():
-                fake_fixed = self.generator(fixed_noise)
-            fake_shape = fake_fixed.shape
-            fake_sample_fixed = fake_fixed.reshape((fake_shape[0], fake_shape[2])).numpy()
-
+            if not im_set:
+                with torch.no_grad():
+                    fake_fixed = self.generator(fixed_noise)
+                fake_shape = fake_fixed.shape
+                fake_sample_fixed = fake_fixed.reshape((fake_shape[0], fake_shape[2])).numpy()
+            else:
+                fake_sample_fixed = self.generator(fixed_noise)
             # Check how the generator is doing by saving its output on fixed_noise
             self.save_gen_sample(fake_sample_fixed, epoch, results_folder)
 
@@ -554,11 +567,14 @@ class MNISTEGAN(EGAN):
         pass
 
     def save_gen_sample(self, sample, epoch, out_dir):
+        fig, axes = plt.subplots(figsize=(7,7), nrows=4, ncols=4, sharey=True, sharex=True)
+        for ax, img in zip(axes.flatten(), sample):
+            img = img.detach()
+            ax.xaxis.set_visible(False)
+            ax.yaxis.set_visible(False)
+            im = ax.imshow(img.reshape((28,28)), cmap='Greys_r')
         path = "{}epoch {}.png".format(out_dir, epoch + 1)
-        plt.figure()
-        plt.imshow(sample)
-        plt.savefig(path)
-        plt.close()
+        fig.savefig(path)
 
 def selected_loss_stat(selected_g_losses, results_folder):
     selected_g_losses = np.array(selected_g_losses)
@@ -624,7 +640,7 @@ def main():
     gan = MNISTEGAN(opt)
     print(gan.generator)
     print(gan.discriminator)
-    gan.train(results_folder)
+    gan.train(results_folder, True)
     
 
 if __name__ == '__main__':
