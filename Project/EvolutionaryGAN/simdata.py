@@ -210,7 +210,7 @@ class MixtureOfGaussians:
                 mode_distr[mode_id] = len(samples)/assigned_samples_num
 
         #average stdev by component
-        stdev = np.mean(stdevs, axis=0)
+        stdev = np.mean(stdevs, axis=0) if len(stdevs) > 0 else [1, 1]
 
         # for mixture of Gaussians all modes are equally likely
         uniform_distr = np.ones(len(modes))/len(modes)
