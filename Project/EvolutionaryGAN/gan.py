@@ -525,7 +525,8 @@ class WGAN(GAN):
                     fake_sample = self.generator(sample_noise(self.opt.batch_size))
     
                     g_loss, fake_out2 = self.train_generator(fake_sample)
-                    self.g_losses.append(g_loss)
+                    # add loss n_critic times
+                    self.g_losses.extend([g_loss]*n_critic)
 
                 # Each few iterations we plot statistics with current discriminator loss, generator loss,
                 # mean of discriminator prediction for real sample,
