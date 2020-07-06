@@ -452,10 +452,10 @@ class WGAN(GAN):
         self.js_divergence.append(js_diver)
 
     def create_d_optimizer(self,opt):
-        return optim.RMSprop(self.discriminator.parameters(), lr=0.00005)
+        return optim.RMSprop(self.discriminator.parameters(), lr=opt.lr)
 
     def create_g_optimizer(self,opt):
-        return optim.RMSprop(self.generator.parameters(), lr=0.00005)
+        return optim.RMSprop(self.generator.parameters(), lr=opt.lr)
     
     def create_discriminator(self):
         return WassersteinToyDiscriminator()
