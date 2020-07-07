@@ -504,6 +504,7 @@ class WGAN(GAN):
         steps_per_epoch = int(np.floor(len(self.data_loader) / self.opt.batch_size))
         for epoch in range(num_epochs):
             # For each batch in the dataloader
+            iter = 0
             for i, real_sample in enumerate(self.data_loader, 0):
                 ############################
                 # (1) Update Discriminator network
@@ -517,8 +518,9 @@ class WGAN(GAN):
                 for p in self.discriminator.parameters():
                     p.data.clamp_(-clip_value, clip_value)
 
+                iter += 1
                 # Train the generator every n_critic iterations
-                if i % n_critic == 0:
+                if iter % n_critic == 0:
                     ############################
                     # (2) Update Generator network
                     ###########################
@@ -532,9 +534,9 @@ class WGAN(GAN):
                 # mean of discriminator prediction for real sample,
                 # mean of discriminator prediction for fake sample before discriminator was trained,
                 # mean of discriminator prediction for fake sample after discriminator was trained,
-                if i % 250 == 0:
+                if iter % 250 == 0:
                     print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
-                          % (epoch+1, num_epochs, i, steps_per_epoch,
+                          % (epoch+1, num_epochs, iter, steps_per_epoch,
                              d_loss, g_loss, real_out.mean().item(), fake_out.mean().item(), fake_out2.mean().item()))
 
             # After each epoch we save global statistics
