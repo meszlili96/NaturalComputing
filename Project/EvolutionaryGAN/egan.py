@@ -46,12 +46,19 @@ class PokeEGANOptions(EGANOptions):
 class MNISTEGANOptions(EGANOptions):
     def __init__(self, ngpu=0):
         super().__init__(ngpu=ngpu)
-        #self.nc = 3
-        #self.ndf = 64
-        #self.ngf = 64
-        #self.nz = 64
-        #self.image_size = 64
         self.dataroot = "data/MNIST"
+        self.input_size = 784
+        self.d_output_size = 1
+        self.d_hidden_size = 32
+        self.z_size = 100
+        self.g_output_size = 784
+        self.g_hidden_size = 32
+
+
+class CelebaGANOptions(EGANOptions):
+    def __init__(self, ngpu=0):
+        super().__init__(ngpu=ngpu)
+        self.dataroot = "data/Celeba"
         self.input_size = 784
         self.d_output_size = 1
         self.d_hidden_size = 32
@@ -528,7 +535,19 @@ class PokeEGAN(EGAN):
         plt.close()
 
 
-class MNISTEGAN(EGAN):
+class ImgGAN(EGAN):
+    def save_gen_sample(self, sample, epoch, out_dir):
+        fig, axes = plt.subplots(figsize=(7,7), nrows=4, ncols=4, sharey=True, sharex=True)
+        for ax, img in zip(axes.flatten(), sample):
+            img = img.detach()
+            ax.xaxis.set_visible(False)
+            ax.yaxis.set_visible(False)
+            im = ax.imshow(img.reshape((28,28)), cmap='Greys_r')
+        path = "{}epoch {}.png".format(out_dir, epoch + 1)
+        fig.savefig(path)
+    
+
+class MNISTEGAN(ImgGAN):
     def __init__(self, opt):
         super().__init__(opt)
         self.img_list = []
@@ -566,15 +585,47 @@ class MNISTEGAN(EGAN):
     def save_statistics(self, fake_sample):
         pass
 
-    def save_gen_sample(self, sample, epoch, out_dir):
-        fig, axes = plt.subplots(figsize=(7,7), nrows=4, ncols=4, sharey=True, sharex=True)
-        for ax, img in zip(axes.flatten(), sample):
-            img = img.detach()
-            ax.xaxis.set_visible(False)
-            ax.yaxis.set_visible(False)
-            im = ax.imshow(img.reshape((28,28)), cmap='Greys_r')
-        path = "{}epoch {}.png".format(out_dir, epoch + 1)
-        fig.savefig(path)
+
+
+class CelebaEGAN(ImgGAN):
+    def __init__(self, opt):
+        super().__init__(opt)
+        self.img_list = []
+    
+    def create_discriminator(self):
+        return MNISTDiscriminator(self.opt.input_size, self.opt.d_hidden_size, self.opt.d_output_size)
+
+    def create_generator(self):
+        return MNISTGenerator(self.opt.z_size, self.opt.g_hidden_size, self.opt.g_output_size)
+
+    def weights_init_func(self):
+        return weights_init_celeb #these weights will probably be alright
+
+    def create_dataset(self):
+        transform = transforms.ToTensor()
+        train_data = datasets.MNIST(root='data', train=True, download=True, transform=transform)
+        return train_data
+
+    def create_data_loader(self):
+        return torch.utils.data.DataLoader(self.dataset,
+                                           batch_size=self.opt.batch_size,
+                                           shuffle=True,
+                                           num_workers=self.opt.workers)
+
+    def evaluate(self, fake_sample, real_sample):
+        pass
+
+    def real_sample(self, eval_sample_size):
+        pass
+
+    def sample_noise(self, size):  #size is nz here
+        z = np.random.uniform(-1, 1, size=(size, self.opt.z_size))
+        return torch.from_numpy(z).float()
+
+    def save_statistics(self, fake_sample):
+        pass
+
+
 
 def selected_loss_stat(selected_g_losses, results_folder):
     selected_g_losses = np.array(selected_g_losses)
@@ -632,8 +683,10 @@ def main():
     gan = PokeEGAN(opt)
     gan.train(results_folder)
     """
-    #pokemon
-    results_folder = "MNIST egan/"
+    
+    
+    #MNIST
+    results_folder = "MNIST egan2/"
     # Change the default parameters if needed
     opt = MNISTEGANOptions()
     # Set up your model here
@@ -642,6 +695,17 @@ def main():
     print(gan.discriminator)
     gan.train(results_folder, True)
     
+    """
+    #Celeba
+    results_folder = "Celeba egan/"
+    # Change the default parameters if needed
+    opt = CelebaGANOptions()
+    # Set up your model here
+    gan = CelebaEGAN(opt)
+    print(gan.generator)
+    print(gan.discriminator)
+    gan.train(results_folder, True)
+    """
 
 if __name__ == '__main__':
     main()
