@@ -58,7 +58,7 @@ class GeneratorLoss(nn.Module):
 
 class Minmax(GeneratorLoss):
     def init_loss(self):
-        return nn.BCELoss()
+        return nn.BCEWithLogitsLoss()
 
     # fake_prediction (tensor) - the prediction output from a discriminator
     def loss(self, fake_prediction):
@@ -70,7 +70,7 @@ class Minmax(GeneratorLoss):
 
 class Heuristic(GeneratorLoss):
     def init_loss(self):
-        return nn.BCELoss()
+        return nn.BCEWithLogitsLoss()
 
     # fake_prediction (tensor) - the prediction output from a discriminator
     def loss(self, fake_prediction):

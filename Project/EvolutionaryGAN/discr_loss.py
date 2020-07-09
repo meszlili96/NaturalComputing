@@ -13,7 +13,7 @@ class DiscriminatorLoss(nn.Module):
         # it is used in the paper autor's implementation, not sure why
         self.register_buffer('real_label', torch.tensor(target_real_label))
         self.register_buffer('fake_label', torch.tensor(target_fake_label))
-        self.loss = nn.BCELoss()
+        self.loss = nn.BCEWithLogitsLoss()
 
     """Create label tensors with the same size as the input.
             Parameters:
@@ -32,6 +32,9 @@ class DiscriminatorLoss(nn.Module):
     def __call__(self, fake_prediction, real_prediction):
         fake_labels = self.get_target_labels(fake_prediction.shape, False)
         reals_labels = self.get_target_labels(real_prediction.shape, True)
+        
+        #print(fake_prediction)
+        #print(fake_labels)
 
         loss_fake = self.loss(fake_prediction, fake_labels)
         loss_real = self.loss(real_prediction, reals_labels)

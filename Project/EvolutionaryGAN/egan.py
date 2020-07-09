@@ -6,6 +6,8 @@ from gen_losses import *
 from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, extract_xy
 from discr_loss import DiscriminatorLoss
 from fitness_function import egan_fitness
+from torchvision import datasets
+
 
 
 class EGANOptions():
@@ -40,6 +42,29 @@ class PokeEGANOptions(EGANOptions):
         self.nz = 64
         self.image_size = 64
         self.dataroot = "pokemon/data"
+
+class MNISTEGANOptions(EGANOptions):
+    def __init__(self, ngpu=0):
+        super().__init__(ngpu=ngpu)
+        self.dataroot = "data/MNIST"
+        self.input_size = 784
+        self.d_output_size = 1
+        self.d_hidden_size = 32
+        self.z_size = 100
+        self.g_output_size = 784
+        self.g_hidden_size = 32
+
+
+class CelebaGANOptions(EGANOptions):
+    def __init__(self, ngpu=0):
+        super().__init__(ngpu=ngpu)
+        self.dataroot = "data/Celeba"
+        self.input_size = 784
+        self.d_output_size = 1
+        self.d_hidden_size = 32
+        self.z_size = 100
+        self.g_output_size = 784
+        self.g_hidden_size = 32
 
 class EGAN():
     __metaclass__ = ABCMeta
@@ -203,17 +228,22 @@ class EGAN():
         self.g_optimizer.step()
         return g_loss.item(), d_output
 
-    def train(self, results_folder):
+    def train(self, results_folder, im_set):
         # Create results directory
         try:
             os.mkdir(results_folder)
         except FileExistsError:
             pass
-
         eval_sample_size = 10000
         fitness_sample_size = 1024
         fixed_noise = self.sample_noise(eval_sample_size)
         real_sample_fixed = self.real_sample(eval_sample_size)
+        
+        ## for testing save function
+        fake_sample_fixed = self.generator(fixed_noise)
+        self.save_gen_sample(fake_sample_fixed, 0, results_folder)
+        ## end of testing save function
+        
         num_epochs = self.opt.num_epochs
         print("Starting Training Loop...")
         steps_per_epoch = int(np.floor(len(self.data_loader) / self.opt.batch_size))
@@ -221,6 +251,12 @@ class EGAN():
             iter = 0
             # For each batch in the dataloader
             for i, real_sample in enumerate(self.data_loader, 0):
+                ############################
+                # If it is an image dataset, the data_loader needs to be handled differently, and transformation is needed
+                ###########################
+                if im_set:
+                    real_sample = real_sample[0]
+                    real_sample = real_sample*2 -1
                 ############################
                 # (1) Update Discriminator network
                 ###########################
@@ -300,11 +336,13 @@ class EGAN():
 
             # After each epoch we save global statistics
             # Sample from generator with fixed noise
-            with torch.no_grad():
-                fake_fixed = self.generator(fixed_noise)
-            fake_shape = fake_fixed.shape
-            fake_sample_fixed = fake_fixed.reshape((fake_shape[0], fake_shape[2])).numpy()
-
+            if not im_set:
+                with torch.no_grad():
+                    fake_fixed = self.generator(fixed_noise)
+                fake_shape = fake_fixed.shape
+                fake_sample_fixed = fake_fixed.reshape((fake_shape[0], fake_shape[2])).numpy()
+            else:
+                fake_sample_fixed = self.generator(fixed_noise)
             # Check how the generator is doing by saving its output on fixed_noise
             self.save_gen_sample(fake_sample_fixed, epoch, results_folder)
 
@@ -497,6 +535,98 @@ class PokeEGAN(EGAN):
         plt.close()
 
 
+class ImgGAN(EGAN):
+    def save_gen_sample(self, sample, epoch, out_dir):
+        fig, axes = plt.subplots(figsize=(7,7), nrows=4, ncols=4, sharey=True, sharex=True)
+        for ax, img in zip(axes.flatten(), sample):
+            img = img.detach()
+            ax.xaxis.set_visible(False)
+            ax.yaxis.set_visible(False)
+            im = ax.imshow(img.reshape((28,28)), cmap='Greys_r')
+        path = "{}epoch {}.png".format(out_dir, epoch + 1)
+        fig.savefig(path)
+    
+
+class MNISTEGAN(ImgGAN):
+    def __init__(self, opt):
+        super().__init__(opt)
+        self.img_list = []
+    
+    def create_discriminator(self):
+        return MNISTDiscriminator(self.opt.input_size, self.opt.d_hidden_size, self.opt.d_output_size)
+
+    def create_generator(self):
+        return MNISTGenerator(self.opt.z_size, self.opt.g_hidden_size, self.opt.g_output_size)
+
+    def weights_init_func(self):
+        return weights_init_celeb #these weights will probably be alright
+
+    def create_dataset(self):
+        transform = transforms.ToTensor()
+        train_data = datasets.MNIST(root='data', train=True, download=True, transform=transform)
+        return train_data
+
+    def create_data_loader(self):
+        return torch.utils.data.DataLoader(self.dataset,
+                                           batch_size=self.opt.batch_size,
+                                           shuffle=True,
+                                           num_workers=self.opt.workers)
+
+    def evaluate(self, fake_sample, real_sample):
+        pass
+
+    def real_sample(self, eval_sample_size):
+        pass
+
+    def sample_noise(self, size):  #size is nz here
+        z = np.random.uniform(-1, 1, size=(size, self.opt.z_size))
+        return torch.from_numpy(z).float()
+
+    def save_statistics(self, fake_sample):
+        pass
+
+
+
+class CelebaEGAN(ImgGAN):
+    def __init__(self, opt):
+        super().__init__(opt)
+        self.img_list = []
+    
+    def create_discriminator(self):
+        return MNISTDiscriminator(self.opt.input_size, self.opt.d_hidden_size, self.opt.d_output_size)
+
+    def create_generator(self):
+        return MNISTGenerator(self.opt.z_size, self.opt.g_hidden_size, self.opt.g_output_size)
+
+    def weights_init_func(self):
+        return weights_init_celeb #these weights will probably be alright
+
+    def create_dataset(self):
+        transform = transforms.ToTensor()
+        train_data = datasets.MNIST(root='data', train=True, download=True, transform=transform)
+        return train_data
+
+    def create_data_loader(self):
+        return torch.utils.data.DataLoader(self.dataset,
+                                           batch_size=self.opt.batch_size,
+                                           shuffle=True,
+                                           num_workers=self.opt.workers)
+
+    def evaluate(self, fake_sample, real_sample):
+        pass
+
+    def real_sample(self, eval_sample_size):
+        pass
+
+    def sample_noise(self, size):  #size is nz here
+        z = np.random.uniform(-1, 1, size=(size, self.opt.z_size))
+        return torch.from_numpy(z).float()
+
+    def save_statistics(self, fake_sample):
+        pass
+
+
+
 def selected_loss_stat(selected_g_losses, results_folder):
     selected_g_losses = np.array(selected_g_losses)
     groups_num = 5
@@ -523,6 +653,7 @@ def selected_loss_stat(selected_g_losses, results_folder):
 
 
 def main():
+    """
     set_seed()
     # 8 gaussians
     results_folder = "8 gauss 0.2 egan/"
@@ -531,7 +662,7 @@ def main():
     # Set up your model here
     gan = ToyEGAN(opt)
     gan.train(results_folder)
-    """
+    
     # 25 gaussians
     results_folder = "25 gauss egan/"
     # Change the default parameters if needed
@@ -552,8 +683,29 @@ def main():
     gan = PokeEGAN(opt)
     gan.train(results_folder)
     """
-
     
+    
+    #MNIST
+    results_folder = "MNIST egan2/"
+    # Change the default parameters if needed
+    opt = MNISTEGANOptions()
+    # Set up your model here
+    gan = MNISTEGAN(opt)
+    print(gan.generator)
+    print(gan.discriminator)
+    gan.train(results_folder, True)
+    
+    """
+    #Celeba
+    results_folder = "Celeba egan/"
+    # Change the default parameters if needed
+    opt = CelebaGANOptions()
+    # Set up your model here
+    gan = CelebaEGAN(opt)
+    print(gan.generator)
+    print(gan.discriminator)
+    gan.train(results_folder, True)
+    """
 
 if __name__ == '__main__':
     main()
