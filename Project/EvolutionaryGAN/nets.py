@@ -8,6 +8,7 @@ import torchvision.datasets as dset
 import torchvision.transforms as transforms
 import torchvision.utils as vutils
 import torch.nn.functional as F
+import numpy as np
 
 
 class ImGenerator(nn.Module):
@@ -128,8 +129,8 @@ class MNISTDiscriminator(nn.Module):
 
 
 class CelebaGenerator(nn.Module): #copied from WGAN
-    def __init__(self, input_size, hidden_dim, output_size):
-        super(MNISTGenerator, self).__init__()
+    def __init__(self, nz, nc, image_size):
+        super(CelebaGenerator, self).__init__()
  
         self.img_shape = (nc, image_size, image_size)
         
@@ -155,27 +156,23 @@ class CelebaGenerator(nn.Module): #copied from WGAN
         return img
 
 class CelebaDiscriminator(nn.Module):
-    def __init__(self, input_size, hidden_dim, output_size):
-        super(MNISTDiscriminator, self).__init__()
+    def __init__(self, nc, image_size):
+        super(CelebaDiscriminator, self).__init__()
  
-        # Number of input features is 2, since our noise is 2D
-        # Define 3 dense layers with the same number of hidden units
-        self.layer_1 = nn.Linear(2, hidden_dim)
-        self.layer_2 = nn.Linear(hidden_dim, hidden_dim)
-        self.layer_3 = nn.Linear(hidden_dim, hidden_dim)
-        # output layer
-        self.layer_out = nn.Linear(hidden_dim, 2)
-        # Relu activation is for hidden layers
-        self.relu = nn.ReLU()
+        self.img_shape = (nc, image_size, image_size)
+        
+        self.model = nn.Sequential(
+            nn.Linear(int(np.prod(self.img_shape)), 512),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(512, 256),
+            nn.LeakyReLU(0.2, inplace=True),
+            nn.Linear(256, 1),
+        )
 
-    def forward(self, noise):
-        x = self.relu(self.layer_1(noise))
-        x = self.relu(self.layer_2(x))
-        x = self.relu(self.layer_3(x))
-        output = self.layer_out(x)
-        out_shape = output.shape
-        # Reshape the output to discriminator input format
-        return output.reshape((out_shape[0], 1, out_shape[1]))
+    def forward(self, img):
+        img_flat = img.view(img.shape[0], -1)
+        validity = self.model(img_flat)
+        return validity
 
 class PokeGenerator(nn.Module):
     #https://github.com/Zhenye-Na/pokemon-gan/blob/master/Pytorch/model/model.py
