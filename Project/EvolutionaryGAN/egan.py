@@ -7,7 +7,7 @@ from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, extract_xy
 from discr_loss import DiscriminatorLoss
 from fitness_function import egan_fitness
 from torchvision import datasets
-
+from torchvision.utils import save_image
 
 
 class EGANOptions():
@@ -544,17 +544,6 @@ class ImgGAN(EGAN):
     for code readability.
     """
     
-    def save_gen_sample(self, sample, epoch, out_dir):
-        fig, axes = plt.subplots(figsize=(7,7), nrows=4, ncols=4, sharey=True, sharex=True)
-        for ax, img in zip(axes.flatten(), sample):
-            img = img.detach()
-            ax.xaxis.set_visible(False)
-            ax.yaxis.set_visible(False)
-            im = ax.imshow(img.reshape((28,28)), cmap='Greys_r')
-        path = "{}epoch {}.png".format(out_dir, epoch + 1)
-        fig.savefig(path)
-        plt.close()
-    
     def weights_init_func(self):
         return weights_init_celeb #these weights will probably be alright
     
@@ -594,6 +583,16 @@ class MNISTEGAN(ImgGAN):
     def save_statistics(self, fake_sample):
         pass
 
+    def save_gen_sample(self, sample, epoch, out_dir):
+        fig, axes = plt.subplots(figsize=(7,7), nrows=4, ncols=4, sharey=True, sharex=True)
+        for ax, img in zip(axes.flatten(), sample):
+            img = img.detach()
+            ax.xaxis.set_visible(False)
+            ax.yaxis.set_visible(False)
+            im = ax.imshow(img.reshape((28,28)), cmap='Greys_r')
+        path = "{}epoch {}.png".format(out_dir, epoch + 1)
+        fig.savefig(path)
+        plt.close()
 
 
 class CelebaEGAN(ImgGAN):
@@ -632,6 +631,8 @@ class CelebaEGAN(ImgGAN):
     def save_statistics(self, fake_sample):
         pass
 
+    def save_gen_sample(self, sample, epoch, out_dir):
+        save_image(gen_imgs.data[:25], str(out_dir)+"/epoch%d.png" % (epoch+1), nrow=5, normalize=True)
 
 
 def selected_loss_stat(selected_g_losses, results_folder):
