@@ -553,6 +553,7 @@ class ImgGAN(EGAN):
             im = ax.imshow(img.reshape((28,28)), cmap='Greys_r')
         path = "{}epoch {}.png".format(out_dir, epoch + 1)
         fig.savefig(path)
+        plt.close()
     
     def weights_init_func(self):
         return weights_init_celeb #these weights will probably be alright
