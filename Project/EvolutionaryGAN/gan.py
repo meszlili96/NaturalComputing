@@ -1,6 +1,8 @@
 import os
 import torch
 import torch.optim as optim
+from torch.autograd import Variable
+
 from nets import *
 from data import *
 from utils import *
@@ -398,7 +400,127 @@ class ToyGAN(GAN):
         self.stdev_y.append(stdev[1])
         self.js_divergence.append(js_diver)
 
-class WGAN(GAN):
+class mnistWGAN(GAN):
+    def __init__(self, opt):
+        super().__init__(opt)
+
+    def weights_init_func(self):
+        return weights_init_DCGAN
+
+    def create_dataset(self):
+        pass
+    
+    def create_data_loader(self):
+        return mnist_dataset(self.opt)
+
+    def save_gen_sample(self, gen_imgs, epoch, out_dir):
+        save_image(gen_imgs.data[:25], str(out_dir)+"/epoch%d.png" % (epoch+1), nrow=5, normalize=True)
+
+    def create_d_optimizer(self,opt):
+        return optim.RMSprop(self.discriminator.parameters(), lr=0.00005)
+
+    def create_g_optimizer(self,opt):
+        return optim.RMSprop(self.generator.parameters(), lr=0.00005)
+    
+    def create_discriminator(self):
+        return WassersteinDiscriminator(self.opt.nc, self.opt.image_size)
+    
+    def create_generator(self):
+        return WassersteinGenerator(self.opt.nz, self.opt.nc, self.opt.image_size)
+    
+    def train_generator(self, fake_sample):
+        self.g_optimizer.zero_grad()
+        # Since we just updated D, perform another forward pass of all-fake batch through D
+        d_output = self.discriminator(fake_sample).view(-1)
+        # Calculate G's loss based on this output
+        g_loss = -torch.mean(d_output)
+        # Calculate gradients for G
+        g_loss.backward()
+        # Update G
+        self.g_optimizer.step()
+        return g_loss.item(), d_output
+    
+    def train_discriminator(self, fake_sample, real_sample):
+        self.d_optimizer.zero_grad()
+        real_prediction = self.discriminator(real_sample)
+        # get fake sample from generator
+        fake_prediction = self.discriminator(fake_sample)
+
+        full_loss = -(torch.mean(real_prediction) - torch.mean(fake_prediction))
+
+        full_loss.backward()
+        self.d_optimizer.step()
+        return full_loss.item(), real_prediction, fake_prediction
+    
+    def train(self, results_folder, writer=None):
+        # Create results directory
+        try:
+            os.mkdir(results_folder)
+        except FileExistsError:
+            pass
+
+        cuda = True if torch.cuda.is_available() else False
+        Tensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
+        num_epochs = self.opt.num_epochs
+        clip_value = 0.01
+        n_critic = 5
+        print("Starting Training Loop...")
+        steps_per_epoch = int(np.floor(len(self.data_loader) / self.opt.batch_size))
+        for epoch in range(num_epochs):
+            # For each batch in the dataloader
+            for i, (imgs, _) in enumerate(self.data_loader):
+                real_sample = Variable(imgs.type(Tensor))
+                ############################
+                # (1) Update Discriminator network
+                ###########################
+
+                # Sample noise as generator input
+                z = Variable(Tensor(np.random.normal(0, 1, (imgs.shape[0], self.opt.nz))))
+
+                # Generate a batch of images
+                fake_sample = self.generator(z).detach()
+                d_loss, real_out, fake_out = self.train_discriminator(fake_sample,
+                                                                      real_sample)
+                self.d_losses.append(d_loss)
+
+                # Clip weights of discriminator
+                for p in self.discriminator.parameters():
+                    p.data.clamp_(-clip_value, clip_value)
+
+                # Train the generator every n_critic iterations
+                if i % n_critic == 0:
+                    ############################
+                    # (2) Update Generator network
+                    ###########################
+                    fake_sample = self.generator(z)
+    
+                    g_loss, fake_out2 = self.train_generator(fake_sample)
+                    # add loss n_critic times
+                    self.g_losses.extend([g_loss]*n_critic)
+
+                # Each few iterations we plot statistics with current discriminator loss, generator loss,
+                # mean of discriminator prediction for real sample,
+                # mean of discriminator prediction for fake sample before discriminator was trained,
+                # mean of discriminator prediction for fake sample after discriminator was trained,
+                if i % 250 == 0:
+                    print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
+                          % (epoch+1, num_epochs, i, steps_per_epoch,
+                             d_loss, g_loss, real_out.mean().item(), fake_out.mean().item(), fake_out2.mean().item()))
+
+            # Check how the generator is doing by saving its output
+            self.save_gen_sample(fake_sample, epoch, results_folder)
+
+        # Losses statistics
+        plt.figure(figsize=(10, 5))
+        plt.title("Generator and Discriminator Loss During Training")
+        plt.plot(self.g_losses, label="G")
+        plt.plot(self.d_losses, label="D")
+        plt.xlabel("iterations")
+        plt.ylabel("Loss")
+        plt.legend()
+        plt.savefig("{}train_summary.png".format(results_folder))
+
+class ToyWGAN(GAN):
     def __init__(self, opt):
         super().__init__(opt)
         # Toy data evaluation metrics statistics
