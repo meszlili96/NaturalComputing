@@ -5,7 +5,7 @@ from utils import *
 from gen_losses import *
 from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, extract_xy
 from discr_loss import DiscriminatorLoss
-
+from torchvision import datasets
 
 class Options():
     def __init__(self, ngpu=0):
@@ -39,7 +39,16 @@ class CelebOptions(Options):
         self.image_size = 64
         self.dataroot = "celeba"
 
-
+class MNISTGANOptions(Options):
+    def __init__(self, ngpu=0):
+        super().__init__(ngpu=ngpu)
+        self.dataroot = "data/MNIST"
+        self.input_size = 784
+        self.d_output_size = 1
+        self.d_hidden_size = 32
+        self.z_size = 100
+        self.g_output_size = 784
+        self.g_hidden_size = 32
 """
 GAN abstract class is a formal protocol, which defines the objects used in GAN training
 Properties:
@@ -161,6 +170,25 @@ class GAN():
     def save_statistics(self, fake_sample):
         raise NotImplementedError
 
+    """Returns real sample of the dataset
+       Parameters:
+            eval_sample_size - size of sample to be provided
+            real_sample - a sample of the real data set of size eval_sample_size
+    """
+    @abstractmethod
+    def real_sample(self, eval_sample_size):
+        raise NotImplementedError
+
+    """Sample noise of certain size
+       Parameters:
+            size - size of sample to be provided
+            noise_sample - a sample of the noise of size
+    """
+    @abstractmethod
+    def sample_noise(self, size):
+        raise NotImplementedError
+
+
     """Performs discriminator training step on a batch of real and fake samples
        Parameters:
            model - an instance of GAN class which defines GAN objects
@@ -197,7 +225,7 @@ class GAN():
         self.g_optimizer.step()
         return g_loss.item(), d_output
 
-    def train(self, results_folder, writer=None):
+    def train(self, results_folder, im_set, writer=None):
         # Create results directory
         try:
             os.mkdir(results_folder)
@@ -205,8 +233,8 @@ class GAN():
             pass
 
         eval_sample_size = 10000
-        fixed_noise = sample_noise(eval_sample_size)
-        real_sample_fixed = self.dataset.distribution.sample(eval_sample_size)
+        fixed_noise = self.sample_noise(eval_sample_size)
+        real_sample_fixed = self.real_sample(eval_sample_size)
         num_epochs = self.opt.num_epochs
         print("Starting Training Loop...")
         steps_per_epoch = int(np.floor(len(self.data_loader) / self.opt.batch_size))
@@ -214,10 +242,13 @@ class GAN():
             # For each batch in the dataloader
             iter = 0
             for i, real_sample in enumerate(self.data_loader, 0):
+                if im_set:
+                    real_sample = real_sample[0]
+                    real_sample = real_sample*2 -1
                 ############################
                 # (1) Update Discriminator network
                 ###########################
-                fake_sample = self.generator(sample_noise(self.opt.batch_size)).detach()
+                fake_sample = self.generator(self.sample_noise(self.opt.batch_size)).detach()
                 d_loss, real_out, fake_out = self.train_discriminator(fake_sample,
                                                                       real_sample)
                 self.d_losses.append(d_loss)
@@ -225,7 +256,7 @@ class GAN():
                 ############################
                 # (2) Update Generator network
                 ###########################
-                fake_sample = self.generator(sample_noise(self.opt.batch_size))
+                fake_sample = self.generator(self.sample_noise(self.opt.batch_size))
 
                 g_loss, fake_out2 = self.train_generator(fake_sample)
                 self.g_losses.append(g_loss)
@@ -242,10 +273,13 @@ class GAN():
 
             # After each epoch we save global statistics
             # Sample from generator with fixed noise
-            with torch.no_grad():
-                fake_fixed = self.generator(fixed_noise)
-            fake_shape = fake_fixed.shape
-            fake_sample_fixed = fake_fixed.reshape((fake_shape[0], fake_shape[2])).numpy()
+            if not im_set:
+                with torch.no_grad():
+                    fake_fixed = self.generator(fixed_noise)
+                fake_shape = fake_fixed.shape
+                fake_sample_fixed = fake_fixed.reshape((fake_shape[0], fake_shape[2])).numpy()
+            else:
+                fake_sample_fixed = self.generator(fixed_noise)
 
             # Check how the generator is doing by saving its output on fixed_noise
             self.save_gen_sample(fake_sample_fixed, epoch, results_folder)
@@ -326,6 +360,13 @@ class ToyGAN(GAN):
         self.stdev_x.append(stdev[0])
         self.stdev_y.append(stdev[1])
         self.js_divergence.append(js_diver)
+    
+    def real_sample(self, eval_sample_size):
+        return self.dataset.distribution.sample(eval_sample_size)
+    
+    def sample_noise(self, size):
+        noise = -1 * torch.rand(size, 2) + 0.5
+        return noise
 
     def save_statistics(self, fake_sample, results_folder):
         # will fail for image GAN
@@ -391,6 +432,67 @@ class ToyGAN(GAN):
         plt.savefig("{}jsd.png".format(results_folder))
 
 
+class ImgGAN(GAN): 
+    """
+    The ImgGAN class is an abstraction of methods that are different from 
+    the toy data set GAN, but similar for all image GANs. This class was 
+    introduced to reduce code duplication.
+    It might be a good idea to move the dataloader here as well, though 
+    it might also be nice to have that below the creation of the data set 
+    for code readability.
+    """
+    
+    def save_gen_sample(self, sample, epoch, out_dir):
+        fig, axes = plt.subplots(figsize=(7,7), nrows=4, ncols=4, sharey=True, sharex=True)
+        for ax, img in zip(axes.flatten(), sample):
+            img = img.detach()
+            ax.xaxis.set_visible(False)
+            ax.yaxis.set_visible(False)
+            im = ax.imshow(img.reshape((28,28)), cmap='Greys_r')
+        path = "{}epoch {}.png".format(out_dir, epoch + 1)
+        fig.savefig(path)
+        plt.close()
+    
+    def weights_init_func(self):
+        return weights_init_celeb #these weights will probably be alright
+    
+
+class MNISTGAN(ImgGAN):
+    def __init__(self, opt):
+        super().__init__(opt)
+        self.img_list = []
+    
+    def create_discriminator(self):
+        return MNISTDiscriminator(self.opt.input_size, self.opt.d_hidden_size, self.opt.d_output_size)
+
+    def create_generator(self):
+        return MNISTGenerator(self.opt.z_size, self.opt.g_hidden_size, self.opt.g_output_size)
+
+    def create_dataset(self):
+        transform = transforms.ToTensor()
+        train_data = datasets.MNIST(root='data/MNIST', train=True, download=True, transform=transform)
+        return train_data
+
+    def create_data_loader(self):
+        return torch.utils.data.DataLoader(self.dataset,
+                                           batch_size=self.opt.batch_size,
+                                           shuffle=True,
+                                           num_workers=self.opt.workers)
+
+    def evaluate(self, fake_sample, real_sample):
+        pass
+
+    def real_sample(self, eval_sample_size):
+        pass
+
+    def sample_noise(self, size):  #size is nz here
+        z = np.random.uniform(-1, 1, size=(size, self.opt.z_size))
+        return torch.from_numpy(z).float()
+
+    def save_statistics(self, fake_sample):
+        pass
+
+
 class CelebGAN(GAN):
     def __init__(self, opt):
         super().__init__(opt)
@@ -425,3 +527,17 @@ class CelebGAN(GAN):
         plt.imshow(sample)
         plt.savefig(path)
         plt.close()
+
+def main():
+    #MNIST
+    results_folder = "MNIST gan/"
+    # Change the default parameters if needed
+    opt = MNISTGANOptions()
+    # Set up your model here
+    gan = MNISTGAN(opt)
+    print(gan.generator)
+    print(gan.discriminator)
+    gan.train(results_folder, True)
+
+if __name__ == '__main__':
+    main()

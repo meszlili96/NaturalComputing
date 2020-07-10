@@ -625,7 +625,7 @@ class CelebaEGAN(ImgGAN):
         pass
 
     def sample_noise(self, size): 
-        z = np.random.uniform(-1, 1, size=(size, self.opt.nz))
+        z = np.random.uniform(0, 1, size=(size, self.opt.nz))
         return torch.from_numpy(z).float()
 
     def save_statistics(self, fake_sample):
