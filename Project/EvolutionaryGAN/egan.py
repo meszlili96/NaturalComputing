@@ -632,7 +632,7 @@ class CelebaEGAN(ImgGAN):
         pass
 
     def save_gen_sample(self, sample, epoch, out_dir):
-        save_image(gen_imgs.data[:25], str(out_dir)+"/epoch%d.png" % (epoch+1), nrow=5, normalize=True)
+        save_image(sample.data[:25], str(out_dir)+"/epoch%d.png" % (epoch+1), nrow=5, normalize=True)
 
 
 def selected_loss_stat(selected_g_losses, results_folder):
@@ -692,7 +692,7 @@ def main():
     gan.train(results_folder)
     """
     
-    """
+    
     #MNIST
     results_folder = "MNIST egan2/"
     # Change the default parameters if needed
@@ -702,7 +702,7 @@ def main():
     print(gan.generator)
     print(gan.discriminator)
     gan.train(results_folder, True)
-    """
+    
     
     #Celeba
     results_folder = "Celeba egan/"
