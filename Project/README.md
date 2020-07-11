@@ -1,16 +1,16 @@
 # EvolutionaryGAN
 
-Code based on paper available at [https://github.com/WANG-Chaoyue/EvolutionaryGAN-pytorch](https://github.com/WANG-Chaoyue/EvolutionaryGAN-pytorch)
-
-### Useful literatire:
- - Generative adversarial nets - the paper which first describes GANs
- - Generalization and equilibrium in generative adversarial nets (GANs) - mode collapse description
- - Unsupervised representation learning with deep convolutional generative adversarial networks - describes the DCGANs archeticture which is used in the paper
- - Least squares generative adversarial networks - describes least-squares mutation
- - Unrolled generative adversarial networks - describes the simulated data used in the paper
- - Evolving deep neural networks - an example of evolutionary computations application (given in the paper and also on Elena's slide)
- - Evolving artificial neural networks - seems to be one of the olders papers about the topic
- - Energy-based generative adversarial network - an example of GANs with objective function that make training more stable
- - Wasserstein generative adversarial networks - GANs with another more robust objective function (WGAN)
- - Improved training of wasserstein gans - desciption of WGAN-GP
+The implementation is based on the paper [https://github.com/WANG-Chaoyue/EvolutionaryGAN-pytorch](https://github.com/WANG-Chaoyue/EvolutionaryGAN-pytorch)
  
+The organisation of the repository is the following:
+
+- **EvolutionaryGAN** folder contains the cource code.
+- **EvolutionaryGAN/scripts** folder contains the shell scripts that can be used to run GAN training.
+- **Gamma comparison eval metrics** folder contains the plots of all evaluation metrics for simulated data saved for gammas which produced the best KDEs. These are the same plots as included into the report.
+- **GANs comparison eval metrics** folder contains the plots of all evaluation metrics for simulated data  saved for the compared GANs. These are the same plots as included into the report.
+- **literature** folder contains the literature we worked with.
+- **Loss functions illustration.png** plot of the loss function used in the implementation made to ensure the correctness of the implementation.
+- **Diversity score function visualisation.png** plot of the diversity score used in the implementation made to ensure the correctness of the implementation.
+- **sim_distr.png** plots of PDEs and scatter plots for the sample of size 10000 for simulated data disctributions.
+
+The results of all our experimenst can be found in [Google Drive folder](https://drive.google.com/drive/folders/1FXKlqFchWaDg0Ha_1QYMNOv1npS3F5Jr?usp=sharing). The titles of the folders and file names are self-explanatory.
