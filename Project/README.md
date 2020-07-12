@@ -37,4 +37,10 @@ The results of all our experimenst can be found in [Google Drive folder](https:/
    - **train_summary.png** - a plot of generator and discriminator losses per epoch.
 - **Celeba experiments** - contains the reults of final experiments on simulated data. The saved plots and statistics is the same as for MNIST.
    
-
+### The instructions to repeat the project results
+1. Install the requirements (it is probably easier to create a separate environment with conda):
+```
+cd EvolutionaryGAN
+pip install -r requirements.txt
+```
+2. Run the experiment you want to reproduce with the corresponding script in `bash_scripts` folder. For example, to run training of GAN-Minmax on the Mixture of 25 Gaussians dataset, use `toy_25_minmax.sh`. If you would like to repeat gamma tuning experiments, change `--gamma` option in `toy_8_egan.sh` and `toy_25_egan.sh` accordingly.
