@@ -44,3 +44,4 @@ cd EvolutionaryGAN
 pip install -r requirements.txt
 ```
 2. Run the experiment you want to reproduce with the corresponding script in `bash_scripts` folder. For example, to run training of GAN-Minmax on the Mixture of 25 Gaussians dataset, use `toy_25_minmax.sh`. If you would like to repeat gamma tuning experiments, change `--gamma` option in `toy_8_egan.sh` and `toy_25_egan.sh` accordingly.
+3. The results will be saved in `EvolutionaryGAN/results` folder
