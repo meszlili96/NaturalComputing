@@ -1,4 +1,5 @@
 import copy
+import torch.optim as optim
 from nets import *
 from data import *
 from utils import *
@@ -19,7 +20,6 @@ class EGANOptions():
         self.beta2 = 0.999
         self.batch_size = 64
         self.workers = 1
-        # TODO: select gamma based on generator quality metrics
         self.gamma = 0.05
         self.device = torch.device("cuda:0" if (torch.cuda.is_available() and self.ngpu > 0) else "cpu")
 

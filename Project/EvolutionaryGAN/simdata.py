@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 from torch.utils.data import DataLoader, IterableDataset
-import torch
 import torch.nn as nn
 from utils import js_divergence
 
@@ -280,13 +279,13 @@ class ToyDiscriminator(nn.Module):
         # Relu activation is for hidden layers
         self.relu = nn.ReLU()
         # Sigmoid activation is for output binary classification layer
-        self.sigmoid = nn.Sigmoid()
+        #self.sigmoid = nn.Sigmoid()
 
     def forward(self, sample):
         x = self.relu(self.layer_1(sample))
         x = self.relu(self.batch_norm(self.layer_2(x)))
         x = self.relu(self.layer_3(x))
-        output = self.sigmoid(self.layer_out(x))
+        output = self.layer_out(x)
         return output
 
 

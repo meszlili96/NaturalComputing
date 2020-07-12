@@ -1,4 +1,4 @@
-from gan import ToyGAN, CelebGAN
+from gan import ToyGAN
 from parser import Parser
 from utils import set_seed
 
