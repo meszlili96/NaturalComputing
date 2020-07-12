@@ -393,10 +393,10 @@ class CelebWGAN(GAN):
         save_image(gen_imgs.data[:25], str(out_dir)+"/epoch%d.png" % (epoch+1), nrow=5, normalize=True)
 
     def create_d_optimizer(self,opt):
-        return optim.RMSprop(self.discriminator.parameters(), lr=0.00005)
+        return optim.RMSprop(self.discriminator.parameters(), lr=self.opt.lr)
 
     def create_g_optimizer(self,opt):
-        return optim.RMSprop(self.generator.parameters(), lr=0.00005)
+        return optim.RMSprop(self.generator.parameters(), lr=self.opt.lr)
     
     def create_discriminator(self):
         discriminator = CelebaDiscriminator(self.opt.nc, self.opt.image_size)
@@ -547,10 +547,10 @@ class ToyWGAN(GAN):
         self.js_divergence.append(js_diver)
 
     def create_d_optimizer(self,opt):
-        return optim.RMSprop(self.discriminator.parameters(), lr=opt.lr)
+        return optim.RMSprop(self.discriminator.parameters(), lr=self.opt.lr)
 
     def create_g_optimizer(self,opt):
-        return optim.RMSprop(self.generator.parameters(), lr=opt.lr)
+        return optim.RMSprop(self.generator.parameters(), lr=self.opt.lr)
     
     def create_discriminator(self):
         return WassersteinToyDiscriminator()
@@ -712,6 +712,24 @@ class MNISTGAN(ImgGAN):
 
     def save_statistics(self, fake_sample):
         pass
+
+class CelebGAN(ImgGAN):
+    def __init__(self, opt):
+        super().__init__(opt)
+
+    def create_dataset(self):
+        return celeb_dataset(self.opt)
+
+    def save_gen_sample(self, gen_imgs, epoch, out_dir):
+        save_image(gen_imgs.data[:25], str(out_dir)+"/epoch%d.png" % (epoch+1), nrow=5, normalize=True)
+    
+    def create_discriminator(self):
+        discriminator = CelebaDiscriminator(self.opt.nc, self.opt.image_size)
+        return discriminator.cuda()
+    
+    def create_generator(self):
+        generator = CelebaGenerator(self.opt.nz, self.opt.nc, self.opt.image_size)
+        return generator.cuda()
 
 
 def main():

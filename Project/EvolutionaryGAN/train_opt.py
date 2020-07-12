@@ -18,6 +18,10 @@ def main():
         gan = ToyWGAN(opt)
     elif opt.gan_type == "MNISTGAN":
         gan = MNISTGAN(opt)
+    elif opt.gan_type == "CelebWGAN":
+        gan = CelebWGAN(opt)
+    elif opt.gan_type == "CelebGAN":
+        gan = CelebGAN(opt)
     gan.train(results_folder, None)
 
 if __name__ == '__main__':

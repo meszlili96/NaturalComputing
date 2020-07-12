@@ -23,7 +23,7 @@ class Parser():
         parser.add_argument('--beta1', type=float, default=0.5, help='hyperparameter for Adam optimizers')
         parser.add_argument('--beta2', type=float, default=0.999, help='hyperparameter for Adam optimizers')
         parser.add_argument('--ngpu', type=int, default=0, help='number of GPUs available, use 0 for CPU mode')
-        parser.add_argument('--gan_type', type=str, required=True, default='ToyGAN', help='type of GAN used. ToyGAN, ToyWGAN, ToyEGAN, MNISTGAN')
+        parser.add_argument('--gan_type', type=str, required=True, default='ToyGAN', help='type of GAN used. ToyGAN, ToyWGAN, ToyEGAN, MNISTGAN or CelebWGAN')
         parser.add_argument('--gamma', type=float, default=0.05, help='EGAN gamma huper-parameter value')
         parser.add_argument('--g_loss', type=int, default=1, help='generator loss function type, 1 - MinMax, 2- heuristic, 3 - least squares')
         parser.add_argument('--toy_type', type=int, help='type of toy dataset, 1 - eight gaussians, 2 - twenty five gaussians, 3 - standard gaussian')
