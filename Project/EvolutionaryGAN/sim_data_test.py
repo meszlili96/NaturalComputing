@@ -1,9 +1,10 @@
 from simdata import *
 import torch
 from discr_loss import DiscriminatorLoss
-from gen_losses import Minmax, Heuristic, LeastSquares
+from gen_losses import Minmax
 import matplotlib.pyplot as plt
 import torch.optim as optim
+from itertools import islice
 
 
 def save_sample(sample, img_name):

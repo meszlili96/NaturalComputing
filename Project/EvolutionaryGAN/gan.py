@@ -1,4 +1,3 @@
-import torch.optim as optim
 from nets import *
 from data import *
 from utils import *
