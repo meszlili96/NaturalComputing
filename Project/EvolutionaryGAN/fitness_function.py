@@ -1,6 +1,7 @@
 from discr_loss import DiscriminatorLoss
 from simdata import *
 from itertools import islice
+import torch
 
 # discriminator - discriminator network
 # criterion - discriminator loss function

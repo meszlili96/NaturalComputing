@@ -226,7 +226,7 @@ class GAN():
         self.g_optimizer.step()
         return g_loss.item(), d_output
 
-    def train(self, results_folder, im_set, writer=None):
+    def train(self, results_folder, im_set=False):
         # Create results directory
         try:
             os.mkdir(results_folder)
@@ -495,41 +495,6 @@ class MNISTGAN(ImgGAN):
     def save_statistics(self, fake_sample):
         pass
 
-
-class CelebGAN(GAN):
-    def __init__(self, opt):
-        super().__init__(opt)
-        self.img_list = []
-
-    def create_discriminator(self):
-        return Discriminator(self.opt.ngpu, self.opt.nc, self.opt.ndf).to(self.opt.device)
-
-    def create_generator(self):
-        return Generator(self.opt.ngpu, self.opt.nc, self.opt.nz, self.opt.ngf).to(self.opt.device)
-
-    def weights_init_func(self):
-        return weights_init_celeb
-
-    def create_dataset(self):
-        return image_dataset(self.opt)
-
-    def create_data_loader(self):
-        return torch.utils.data.DataLoader(self.dataset,
-                                           batch_size=self.opt.batch_size,
-                                           shuffle=True,
-                                           num_workers=self.opt.workers)
-
-    def evaluate(self, fake_sample, real_sample):
-        pass
-
-    def save_statistics(self, fake_sample):
-        pass
-
-    def save_gen_sample(self, sample, epoch, out_dir):
-        plt.figure()
-        plt.imshow(sample)
-        plt.savefig(path)
-        plt.close()
 
 def main():
     #MNIST

@@ -32,9 +32,6 @@ class DiscriminatorLoss(nn.Module):
     def __call__(self, fake_prediction, real_prediction):
         fake_labels = self.get_target_labels(fake_prediction.shape, False)
         reals_labels = self.get_target_labels(real_prediction.shape, True)
-        
-        #print(fake_prediction)
-        #print(fake_labels)
 
         loss_fake = self.loss(fake_prediction, fake_labels)
         loss_real = self.loss(real_prediction, reals_labels)

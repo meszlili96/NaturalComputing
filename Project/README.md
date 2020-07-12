@@ -1,16 +1,47 @@
 # EvolutionaryGAN
 
-Code based on paper available at [https://github.com/WANG-Chaoyue/EvolutionaryGAN-pytorch](https://github.com/WANG-Chaoyue/EvolutionaryGAN-pytorch)
-
-### Useful literatire:
- - Generative adversarial nets - the paper which first describes GANs
- - Generalization and equilibrium in generative adversarial nets (GANs) - mode collapse description
- - Unsupervised representation learning with deep convolutional generative adversarial networks - describes the DCGANs archeticture which is used in the paper
- - Least squares generative adversarial networks - describes least-squares mutation
- - Unrolled generative adversarial networks - describes the simulated data used in the paper
- - Evolving deep neural networks - an example of evolutionary computations application (given in the paper and also on Elena's slide)
- - Evolving artificial neural networks - seems to be one of the olders papers about the topic
- - Energy-based generative adversarial network - an example of GANs with objective function that make training more stable
- - Wasserstein generative adversarial networks - GANs with another more robust objective function (WGAN)
- - Improved training of wasserstein gans - desciption of WGAN-GP
+The implementation is based on the paper [https://github.com/WANG-Chaoyue/EvolutionaryGAN-pytorch](https://github.com/WANG-Chaoyue/EvolutionaryGAN-pytorch)
  
+### The organisation of the repository
+
+- **EvolutionaryGAN** folder contains the cource code.
+- **EvolutionaryGAN/scripts** folder contains the shell scripts that can be used to run GAN training.
+- **Gamma comparison eval metrics** folder contains the plots of all evaluation metrics for simulated data saved for gammas which produced the best KDEs. These are the same plots as included into the report.
+- **GANs comparison eval metrics** folder contains the plots of all evaluation metrics for simulated data  saved for the compared GANs. These are the same plots as included into the report.
+- **literature** folder contains the literature we worked with.
+- **Loss functions illustration.png** plot of the loss function used in the implementation made to ensure the correctness of the implementation.
+- **Diversity score function visualisation.png** plot of the diversity score used in the implementation made to ensure the correctness of the implementation.
+- **sim_distr.png** plots of PDEs and scatter plots for the sample of size 10000 for simulated data disctributions.
+
+### The results
+
+The results of all our experimenst can be found in [Google Drive folder](https://drive.google.com/drive/folders/1FXKlqFchWaDg0Ha_1QYMNOv1npS3F5Jr?usp=sharing). 
+- **EGAN simulated data gamma tuning** contains the results of all runs made for gamma tuning for both 8 and 25 Gaussians datasets. Each folder for a separate run has the following set of files:
+   - **epoch N.png** - a scatter plot of a generated sample of size 10000 after the epoch number N
+   - **hq_rate.png** - a plot of high quality samples rate change per epoch. 
+   - **hq_rate.npy** - saved values of high quality samples rate per epoch. Helpful to recreate the plot and place a few plot in one figure for comparison.
+   - **jsd.png** - a plot of Jensen-Shannon divergence change per epoch.
+   - **jsd.npy** - saved values of Jensen-Shannon divergence per epoch.
+   - **x_stdev.png** - a plot of x standard deviation change per epoch.
+   - **x_stdev.npy** - saved values of x standard deviation per epoch.
+   - **y_stdev.png** - a plot of y standard deviation change per epoch.
+   - **y_stdev.npy** - saved values of y standard deviation per epoch.
+   - **rs_ll.png** - a plot of change of true sample average log-likelihood under approximated generator distribution per epoch.
+   - **rs_ll.npy** - saved values of true sample average log-likelihood under approximated generator distribution per epoch.
+   - **KDE** - KDE of the disctribution learned by generator obtained at the end of training.
+   - **selected_mutations_stats** - the statistics of selected mutations splitted by training stages.
+   - **train_summary.png** - a plot of generator and discriminator losses per epoch.
+- **Simulated data experiments** - contains the reults of final experiments on simulated data. The saved plots and statistics is the same as for gamma tuning.
+- **MNIST experiments** - contains the reults of final experiments on simulated data. Each folder for a separate run has the following set of files:
+   - **epoch N.png** - a sample of generated images obtained after the epoch number N.
+   - **train_summary.png** - a plot of generator and discriminator losses per epoch.
+- **Celeba experiments** - contains the reults of final experiments on simulated data. The saved plots and statistics is the same as for MNIST.
+   
+### The instructions to repeat the project results
+1. Install the requirements (it is probably easier to create a separate environment with conda):
+```
+cd EvolutionaryGAN
+pip install -r requirements.txt
+```
+2. Run the experiment you want to reproduce with the corresponding script in `bash_scripts` folder. For example, to run training of GAN-Minmax on the Mixture of 25 Gaussians dataset, use `toy_25_minmax.sh`. If you would like to repeat gamma tuning experiments, change `--gamma` option in `toy_8_egan.sh` and `toy_25_egan.sh` accordingly.
+3. The results will be saved in `EvolutionaryGAN/results` folder

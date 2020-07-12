@@ -1,5 +1,5 @@
 from utils import  set_seed
-from gan import ToyGAN, CelebGAN, ToyOptions, CelebOptions
+from gan import ToyGAN, ToyOptions
 
 from torch.utils.tensorboard import SummaryWriter
 
