@@ -2,7 +2,7 @@
 
 The implementation is based on the paper [https://github.com/WANG-Chaoyue/EvolutionaryGAN-pytorch](https://github.com/WANG-Chaoyue/EvolutionaryGAN-pytorch)
  
-The organisation of the repository is the following:
+### The organisation of the repository
 
 - **EvolutionaryGAN** folder contains the cource code.
 - **EvolutionaryGAN/scripts** folder contains the shell scripts that can be used to run GAN training.
@@ -12,6 +12,8 @@ The organisation of the repository is the following:
 - **Loss functions illustration.png** plot of the loss function used in the implementation made to ensure the correctness of the implementation.
 - **Diversity score function visualisation.png** plot of the diversity score used in the implementation made to ensure the correctness of the implementation.
 - **sim_distr.png** plots of PDEs and scatter plots for the sample of size 10000 for simulated data disctributions.
+
+### The results
 
 The results of all our experimenst can be found in [Google Drive folder](https://drive.google.com/drive/folders/1FXKlqFchWaDg0Ha_1QYMNOv1npS3F5Jr?usp=sharing). 
 - **EGAN simulated data gamma tuning** contains the results of all runs made for gamma tuning for both 8 and 25 Gaussians datasets. Each folder for a separate run has the following set of files:
