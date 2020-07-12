@@ -39,7 +39,7 @@ class MNISTEGANOptions(EGANOptions):
         self.input_size = 784
         self.d_output_size = 1
         self.d_hidden_size = 32
-        self.z_size = 100
+        self.nz = 100
         self.g_output_size = 784
         self.g_hidden_size = 32
 
@@ -510,7 +510,7 @@ class MNISTEGAN(ImgGAN):
         return MNISTDiscriminator(self.opt.input_size, self.opt.d_hidden_size, self.opt.d_output_size)
 
     def create_generator(self):
-        return MNISTGenerator(self.opt.z_size, self.opt.g_hidden_size, self.opt.g_output_size)
+        return MNISTGenerator(self.opt.nz, self.opt.g_hidden_size, self.opt.g_output_size)
 
     def create_dataset(self):
         transform = transforms.ToTensor()
@@ -524,7 +524,7 @@ class MNISTEGAN(ImgGAN):
         pass
 
     def sample_noise(self, size):  #size is nz here
-        z = np.random.uniform(-1, 1, size=(size, self.opt.z_size))
+        z = np.random.uniform(-1, 1, size=(size, self.opt.nz))
         return torch.from_numpy(z).float()
 
     def save_statistics(self, fake_sample):
