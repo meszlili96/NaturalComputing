@@ -1,4 +1,5 @@
 from gan import ToyGAN
+from egan import ToyEGAN
 from parser import Parser
 from utils import set_seed
 
@@ -9,7 +10,11 @@ def main():
     #writer = SummaryWriter('runs/test')
     opt = Parser().parse()
     # Set up your model here
-    gan = ToyGAN(opt)
+    if opt.gan_type == "GAN":
+        gan = ToyGAN(opt)
+    elif opt.gan_type == "EGAN":
+        gan = ToyEGAN(opt)
+    # TODO: add WGAN
     gan.train(results_folder, None)
 
 if __name__ == '__main__':

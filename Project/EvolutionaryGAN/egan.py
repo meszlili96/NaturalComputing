@@ -227,7 +227,7 @@ class EGAN():
         self.g_optimizer.step()
         return g_loss.item(), d_output
 
-    def train(self, results_folder, im_set):
+    def train(self, results_folder, im_set=False):
         # Create results directory
         try:
             os.mkdir(results_folder)
@@ -237,10 +237,13 @@ class EGAN():
         fitness_sample_size = 1024
         fixed_noise = self.sample_noise(eval_sample_size)
         real_sample_fixed = self.real_sample(eval_sample_size)
-        
+        print(self.gamma)
         ## for testing save function
         fake_sample_fixed = self.generator(fixed_noise)
-        self.save_gen_sample(fake_sample_fixed, 0, results_folder)
+        if not im_set:
+            fake_shape = fake_sample_fixed.shape
+            fake_sample_fixed = fake_sample_fixed.reshape((fake_shape[0], fake_shape[2])).detach().numpy()
+        self.save_gen_sample(fake_sample_fixed, -1, results_folder)
         ## end of testing save function
         
         num_epochs = self.opt.num_epochs
@@ -661,7 +664,7 @@ def selected_loss_stat(selected_g_losses, results_folder):
 
 
 def main():
-    """
+
     set_seed()
     # 8 gaussians
     results_folder = "8 gauss 0.2 egan/"
@@ -679,7 +682,7 @@ def main():
     # Set up your model here
     gan = ToyEGAN(opt)
     gan.train(results_folder)
-    """
+
 
     """
     #pokemon
