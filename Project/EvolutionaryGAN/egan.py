@@ -8,7 +8,7 @@ from discr_loss import DiscriminatorLoss
 from fitness_function import egan_fitness
 from torchvision import datasets
 from torchvision.utils import save_image
-
+import datetime
 
 class EGANOptions():
     def __init__(self, ngpu=0):
@@ -245,6 +245,7 @@ class EGAN():
         
         num_epochs = self.opt.num_epochs
         print("Starting Training Loop...")
+        begin_time = datetime.datetime.now()
         steps_per_epoch = int(np.floor(len(self.data_loader) / self.opt.batch_size))
         for epoch in range(num_epochs):
             iter = 0
@@ -348,6 +349,7 @@ class EGAN():
             # Calculate and save evaluation metrics
             self.evaluate(fake_sample_fixed, real_sample_fixed)
 
+        print(datetime.datetime.now() - begin_time)
         # Losses statistics
         plt.figure(figsize=(10, 5))
         plt.title("Generator and Discriminator Loss During Training")
@@ -694,7 +696,7 @@ def main():
     
     
     #MNIST
-    results_folder = "MNIST egan2/"
+    results_folder = "MNIST egan3/"
     # Change the default parameters if needed
     opt = MNISTEGANOptions()
     # Set up your model here
@@ -703,7 +705,7 @@ def main():
     print(gan.discriminator)
     gan.train(results_folder, True)
     
-    
+    """
     #Celeba
     results_folder = "Celeba egan/"
     # Change the default parameters if needed
@@ -713,7 +715,7 @@ def main():
     print(gan.generator)
     print(gan.discriminator)
     gan.train(results_folder, True)
-
+    """
 
 if __name__ == '__main__':
     main()

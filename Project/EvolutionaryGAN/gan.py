@@ -6,6 +6,7 @@ from gen_losses import *
 from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, extract_xy
 from discr_loss import DiscriminatorLoss
 from torchvision import datasets
+import datetime
 
 class Options():
     def __init__(self, ngpu=0):
@@ -237,6 +238,7 @@ class GAN():
         real_sample_fixed = self.real_sample(eval_sample_size)
         num_epochs = self.opt.num_epochs
         print("Starting Training Loop...")
+        begin_time = datetime.datetime.now()
         steps_per_epoch = int(np.floor(len(self.data_loader) / self.opt.batch_size))
         for epoch in range(num_epochs):
             # For each batch in the dataloader
@@ -287,6 +289,7 @@ class GAN():
             # Calculate and save evaluation metrics
             self.evaluate(fake_sample_fixed, real_sample_fixed)
 
+        print(datetime.datetime.now() - begin_time)
         # Losses statistics
         plt.figure(figsize=(10, 5))
         plt.title("Generator and Discriminator Loss During Training")
@@ -530,7 +533,7 @@ class CelebGAN(GAN):
 
 def main():
     #MNIST
-    results_folder = "MNIST gan/"
+    results_folder = "MNIST gan2/"
     # Change the default parameters if needed
     opt = MNISTGANOptions()
     # Set up your model here
