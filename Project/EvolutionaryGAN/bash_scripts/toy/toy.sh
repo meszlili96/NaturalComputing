@@ -1,4 +1,4 @@
-python3.7 ../train_opt.py \
+python3.7 ../../train_opt.py \
 --workers 1 \
 --batch_size 100 \
 --num_epochs 30 \

@@ -1,15 +1,14 @@
 import torch
-from discr_loss import DiscriminatorLoss
-from gen_losses import Minmax
 import matplotlib.pyplot as plt
 import torch.optim as optim
+from torch.utils.data import DataLoader
 from itertools import islice
 
-from utils import *
-from simdata import MixtureOfGaussiansDataset, SimulatedDistribution
-from nets import ToyDiscriminator, ToyGenerator, weighs_init_toy
 from discr_loss import DiscriminatorLoss
 from gen_losses import Minmax
+from simdata import MixtureOfGaussiansDataset, SimulatedDistribution
+from nets import ToyDiscriminator, ToyGenerator, weights_init_toy
+from utils import sample_noise
 
 def train_discriminator(discriminator, loss, optimizer, fake_sample, real_sample):
     optimizer.zero_grad()
@@ -40,16 +39,16 @@ def train_generator(loss, discriminator, optimizer, fake_sample):
 
 def main():
     generator = ToyGenerator()
-    generator.apply(weighs_init_toy)
+    generator.apply(weights_init_toy)
     generator_loss = Minmax()
 
     discriminator = ToyDiscriminator()
-    discriminator.apply(weighs_init_toy)
+    discriminator.apply(weights_init_toy)
     discriminator_loss = DiscriminatorLoss()
 
     batch_size = 100
     iterable_dataset = MixtureOfGaussiansDataset(SimulatedDistribution.eight_gaussians)
-    data_loader = data.DataLoader(iterable_dataset, batch_size=batch_size)
+    data_loader = DataLoader(iterable_dataset, batch_size=batch_size)
 
     # Setup Adam optimizers for both G and D
     learning_rate = 1e-3

@@ -25,3 +25,24 @@ def image_dataset(opt):
                                ]))
 
     return dataset
+
+def mnist_dataset(opt):
+    return dset.MNIST(
+                "~/data/mnist",
+                train=True,
+                download=True,
+                transform=transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5], [0.5])]),
+            )
+
+def celeb_dataset(opt):
+    return dset.CelebA(
+                "~/data/celeb",
+                download=True,
+                split='train',
+                transform=transforms.Compose([
+                                   transforms.Resize(opt.image_size),
+                                   transforms.CenterCrop(opt.image_size),
+                                   transforms.ToTensor(),
+                                   transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+                               ])
+               )

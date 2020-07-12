@@ -4,7 +4,7 @@ from nets import *
 from data import *
 from utils import *
 from gen_losses import *
-from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, extract_xy
+from simdata import extract_xy
 from discr_loss import DiscriminatorLoss
 from fitness_function import egan_fitness
 from torchvision import datasets
@@ -32,17 +32,6 @@ class ToyEGANOptions(EGANOptions):
         self.toy_scale = 2.0
         self.toy_len = 500*self.batch_size
 
-
-class PokeEGANOptions(EGANOptions):
-    def __init__(self, ngpu=0):
-        super().__init__(ngpu=ngpu)
-        self.nc = 3
-        self.ndf = 64
-        self.ngf = 64
-        self.nz = 64
-        self.image_size = 64
-        self.dataroot = "pokemon/data"
-
 class MNISTEGANOptions(EGANOptions):
     def __init__(self, ngpu=0):
         super().__init__(ngpu=ngpu)
@@ -59,8 +48,6 @@ class CelebaEGANOptions(EGANOptions):
     def __init__(self, ngpu=0):
         super().__init__(ngpu=ngpu)
         self.nc = 3
-        self.ndf = 64
-        self.ngf = 64
         self.nz = 100
         self.image_size = 64
         self.dataroot = "data/celeba"
@@ -388,7 +375,7 @@ class ToyEGAN(EGAN):
         return ToyGenerator()
 
     def weights_init_func(self):
-        return weighs_init_toy
+        return weights_init_toy
 
     def create_dataset(self):
         return MixtureOfGaussiansDataset(SimulatedDistribution(self.opt.toy_type),
@@ -494,51 +481,6 @@ class ToyEGAN(EGAN):
         plt.ylabel("JSD(nats)")
         plt.savefig("{}jsd.png".format(results_folder))
 
-
-class PokeEGAN(EGAN):
-    def __init__(self, opt):
-        super().__init__(opt)
-        self.img_list = []
-    
-    def create_discriminator(self):
-        return PokeDiscriminator(self.opt.ngpu, self.opt.nc, self.opt.ndf)
-
-    def create_generator(self):
-        return PokeGenerator(self.opt.ngpu, self.opt.nc, self.opt.nz, self.opt.ngf)
-
-    def weights_init_func(self):
-        return weights_init_celeb #these weights will probably be alright
-
-    def create_dataset(self):
-        return image_dataset(self.opt)
-
-    def create_data_loader(self):
-        return torch.utils.data.DataLoader(self.dataset,
-                                           batch_size=self.opt.batch_size,
-                                           shuffle=True,
-                                           num_workers=self.opt.workers)
-
-    def evaluate(self, fake_sample, real_sample):
-        pass
-
-    def real_sample(self, eval_sample_size):
-        pass
-
-    def sample_noise(self, size):  #size is nz here
-        fixed_noise = torch.randn(64, size, 1, 1)
-        return fixed_noise
-
-    def save_statistics(self, fake_sample):
-        pass
-
-    def save_gen_sample(self, sample, epoch, out_dir):
-        path = "{}epoch {}.png".format(out_dir, epoch + 1)
-        plt.figure()
-        plt.imshow(sample)
-        plt.savefig(path)
-        plt.close()
-
-
 class ImgGAN(EGAN): 
     """
     The ImgGAN class is an abstraction of methods that are different from 
@@ -550,7 +492,13 @@ class ImgGAN(EGAN):
     """
     
     def weights_init_func(self):
-        return weights_init_celeb #these weights will probably be alright
+        return weights_init
+
+    def create_data_loader(self):
+        return torch.utils.data.DataLoader(self.dataset,
+                                           batch_size=self.opt.batch_size,
+                                           shuffle=True,
+                                           num_workers=self.opt.workers)
     
 
 class MNISTEGAN(ImgGAN):
@@ -568,12 +516,6 @@ class MNISTEGAN(ImgGAN):
         transform = transforms.ToTensor()
         train_data = datasets.MNIST(root='data/MNIST', train=True, download=True, transform=transform)
         return train_data
-
-    def create_data_loader(self):
-        return torch.utils.data.DataLoader(self.dataset,
-                                           batch_size=self.opt.batch_size,
-                                           shuffle=True,
-                                           num_workers=self.opt.workers)
 
     def evaluate(self, fake_sample, real_sample):
         pass
@@ -616,12 +558,6 @@ class CelebaEGAN(ImgGAN):
         #train_data = datasets.CelebA(root='data/celeba/celeba', split='train', download=False, transform=transform)
         return image_dataset(self.opt)
         #return train_data
-
-    def create_data_loader(self):
-        return torch.utils.data.DataLoader(self.dataset,
-                                           batch_size=self.opt.batch_size,
-                                           shuffle=True,
-                                           num_workers=self.opt.workers)
 
     def evaluate(self, fake_sample, real_sample):
         pass

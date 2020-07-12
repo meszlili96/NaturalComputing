@@ -1,4 +1,4 @@
-python3.7 ../train_opt.py \
+python3.7 ../../train_opt.py \
 --workers 1 \
 --batch_size 64 \
 --num_epochs 100 \
@@ -10,6 +10,6 @@ python3.7 ../train_opt.py \
 --toy_std 0.02 \
 --toy_scale 2.0 \
 --toy_len 32000 \
---g_loss 3 \
+--g_loss 1 \
 --gan_type "GAN"
 
