@@ -4,7 +4,7 @@ The implementation is based on the paper [https://github.com/WANG-Chaoyue/Evolut
  
 ### The organisation of the repository
 
-- **EvolutionaryGAN** folder contains the cource code.
+- **EvolutionaryGAN** folder contains the source code.
 - **EvolutionaryGAN/scripts** folder contains the shell scripts that can be used to run GAN training.
 - **Gamma comparison eval metrics** folder contains the plots of all evaluation metrics for simulated data saved for gammas which produced the best KDEs. These are the same plots as included into the report.
 - **GANs comparison eval metrics** folder contains the plots of all evaluation metrics for simulated data  saved for the compared GANs. These are the same plots as included into the report.
