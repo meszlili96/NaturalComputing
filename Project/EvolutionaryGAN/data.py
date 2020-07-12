@@ -25,7 +25,3 @@ def image_dataset(opt):
                                ]))
 
     return dataset
-    # Create the dataloader
-    #dataloader = torch.utils.data.DataLoader(dataset, batch_size=opt.batch_size,
-    #                                         shuffle=True, num_workers=opt.workers)
-    #return dataloader
