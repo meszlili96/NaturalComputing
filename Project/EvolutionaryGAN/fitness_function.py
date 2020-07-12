@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from discr_loss import DiscriminatorLoss
 from simdata import StandardGaussian, EightInCircle, MixtureOfGaussiansDataset, SimulatedDistribution
 from itertools import islice
+import torch
 
 # discriminator - discriminator network
 # criterion - discriminator loss function

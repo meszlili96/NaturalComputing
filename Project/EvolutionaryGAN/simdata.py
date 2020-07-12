@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 from torch.utils.data import DataLoader, IterableDataset
-import torch
 import torch.nn as nn
 from utils import js_divergence
 

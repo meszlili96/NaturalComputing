@@ -1,7 +1,8 @@
 import torch
-import torch.optim as optim
-import torch.utils.data as data
+from discr_loss import DiscriminatorLoss
+from gen_losses import Minmax
 import matplotlib.pyplot as plt
+import torch.optim as optim
 from itertools import islice
 
 from utils import *

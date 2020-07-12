@@ -1,4 +1,5 @@
 import copy
+import torch.optim as optim
 from nets import *
 from data import *
 from utils import *
@@ -7,8 +8,8 @@ from simdata import ToyGenerator, ToyDiscriminator, weighs_init_toy, extract_xy
 from discr_loss import DiscriminatorLoss
 from fitness_function import egan_fitness
 from torchvision import datasets
-
-
+from torchvision.utils import save_image
+import datetime
 
 class EGANOptions():
     def __init__(self, ngpu=0):
@@ -19,7 +20,6 @@ class EGANOptions():
         self.beta2 = 0.999
         self.batch_size = 64
         self.workers = 1
-        # TODO: select gamma based on generator quality metrics
         self.gamma = 0.05
         self.device = torch.device("cuda:0" if (torch.cuda.is_available() and self.ngpu > 0) else "cpu")
 
@@ -55,16 +55,15 @@ class MNISTEGANOptions(EGANOptions):
         self.g_hidden_size = 32
 
 
-class CelebaGANOptions(EGANOptions):
+class CelebaEGANOptions(EGANOptions):
     def __init__(self, ngpu=0):
         super().__init__(ngpu=ngpu)
-        self.dataroot = "data/Celeba"
-        self.input_size = 784
-        self.d_output_size = 1
-        self.d_hidden_size = 32
-        self.z_size = 100
-        self.g_output_size = 784
-        self.g_hidden_size = 32
+        self.nc = 3
+        self.ndf = 64
+        self.ngf = 64
+        self.nz = 100
+        self.image_size = 64
+        self.dataroot = "data/celeba"
 
 class EGAN():
     __metaclass__ = ABCMeta
@@ -228,7 +227,7 @@ class EGAN():
         self.g_optimizer.step()
         return g_loss.item(), d_output
 
-    def train(self, results_folder, im_set):
+    def train(self, results_folder, im_set=False):
         # Create results directory
         try:
             os.mkdir(results_folder)
@@ -238,14 +237,18 @@ class EGAN():
         fitness_sample_size = 1024
         fixed_noise = self.sample_noise(eval_sample_size)
         real_sample_fixed = self.real_sample(eval_sample_size)
-        
+        print(self.gamma)
         ## for testing save function
         fake_sample_fixed = self.generator(fixed_noise)
-        self.save_gen_sample(fake_sample_fixed, 0, results_folder)
+        if not im_set:
+            fake_shape = fake_sample_fixed.shape
+            fake_sample_fixed = fake_sample_fixed.reshape((fake_shape[0], fake_shape[2])).detach().numpy()
+        self.save_gen_sample(fake_sample_fixed, -1, results_folder)
         ## end of testing save function
         
         num_epochs = self.opt.num_epochs
         print("Starting Training Loop...")
+        begin_time = datetime.datetime.now()
         steps_per_epoch = int(np.floor(len(self.data_loader) / self.opt.batch_size))
         for epoch in range(num_epochs):
             iter = 0
@@ -349,6 +352,7 @@ class EGAN():
             # Calculate and save evaluation metrics
             self.evaluate(fake_sample_fixed, real_sample_fixed)
 
+        print(datetime.datetime.now() - begin_time)
         # Losses statistics
         plt.figure(figsize=(10, 5))
         plt.title("Generator and Discriminator Loss During Training")
@@ -535,16 +539,18 @@ class PokeEGAN(EGAN):
         plt.close()
 
 
-class ImgGAN(EGAN):
-    def save_gen_sample(self, sample, epoch, out_dir):
-        fig, axes = plt.subplots(figsize=(7,7), nrows=4, ncols=4, sharey=True, sharex=True)
-        for ax, img in zip(axes.flatten(), sample):
-            img = img.detach()
-            ax.xaxis.set_visible(False)
-            ax.yaxis.set_visible(False)
-            im = ax.imshow(img.reshape((28,28)), cmap='Greys_r')
-        path = "{}epoch {}.png".format(out_dir, epoch + 1)
-        fig.savefig(path)
+class ImgGAN(EGAN): 
+    """
+    The ImgGAN class is an abstraction of methods that are different from 
+    the toy data set GAN, but similar for all image GANs. This class was 
+    introduced to reduce code duplication.
+    It might be a good idea to move the dataloader here as well, though 
+    it might also be nice to have that below the creation of the data set 
+    for code readability.
+    """
+    
+    def weights_init_func(self):
+        return weights_init_celeb #these weights will probably be alright
     
 
 class MNISTEGAN(ImgGAN):
@@ -558,12 +564,9 @@ class MNISTEGAN(ImgGAN):
     def create_generator(self):
         return MNISTGenerator(self.opt.z_size, self.opt.g_hidden_size, self.opt.g_output_size)
 
-    def weights_init_func(self):
-        return weights_init_celeb #these weights will probably be alright
-
     def create_dataset(self):
         transform = transforms.ToTensor()
-        train_data = datasets.MNIST(root='data', train=True, download=True, transform=transform)
+        train_data = datasets.MNIST(root='data/MNIST', train=True, download=True, transform=transform)
         return train_data
 
     def create_data_loader(self):
@@ -585,6 +588,16 @@ class MNISTEGAN(ImgGAN):
     def save_statistics(self, fake_sample):
         pass
 
+    def save_gen_sample(self, sample, epoch, out_dir):
+        fig, axes = plt.subplots(figsize=(7,7), nrows=4, ncols=4, sharey=True, sharex=True)
+        for ax, img in zip(axes.flatten(), sample):
+            img = img.detach()
+            ax.xaxis.set_visible(False)
+            ax.yaxis.set_visible(False)
+            im = ax.imshow(img.reshape((28,28)), cmap='Greys_r')
+        path = "{}epoch {}.png".format(out_dir, epoch + 1)
+        fig.savefig(path)
+        plt.close()
 
 
 class CelebaEGAN(ImgGAN):
@@ -593,18 +606,16 @@ class CelebaEGAN(ImgGAN):
         self.img_list = []
     
     def create_discriminator(self):
-        return MNISTDiscriminator(self.opt.input_size, self.opt.d_hidden_size, self.opt.d_output_size)
+        return CelebaDiscriminator(self.opt.nc, self.opt.image_size)
 
     def create_generator(self):
-        return MNISTGenerator(self.opt.z_size, self.opt.g_hidden_size, self.opt.g_output_size)
-
-    def weights_init_func(self):
-        return weights_init_celeb #these weights will probably be alright
+        return CelebaGenerator(self.opt.nz, self.opt.nc, self.opt.image_size)
 
     def create_dataset(self):
-        transform = transforms.ToTensor()
-        train_data = datasets.MNIST(root='data', train=True, download=True, transform=transform)
-        return train_data
+        #transform = transforms.ToTensor()
+        #train_data = datasets.CelebA(root='data/celeba/celeba', split='train', download=False, transform=transform)
+        return image_dataset(self.opt)
+        #return train_data
 
     def create_data_loader(self):
         return torch.utils.data.DataLoader(self.dataset,
@@ -618,13 +629,15 @@ class CelebaEGAN(ImgGAN):
     def real_sample(self, eval_sample_size):
         pass
 
-    def sample_noise(self, size):  #size is nz here
-        z = np.random.uniform(-1, 1, size=(size, self.opt.z_size))
+    def sample_noise(self, size): 
+        z = np.random.uniform(0, 1, size=(size, self.opt.nz))
         return torch.from_numpy(z).float()
 
     def save_statistics(self, fake_sample):
         pass
 
+    def save_gen_sample(self, sample, epoch, out_dir):
+        save_image(sample.data[:25], str(out_dir)+"/epoch%d.png" % (epoch+1), nrow=5, normalize=True)
 
 
 def selected_loss_stat(selected_g_losses, results_folder):
@@ -653,7 +666,7 @@ def selected_loss_stat(selected_g_losses, results_folder):
 
 
 def main():
-    """
+
     set_seed()
     # 8 gaussians
     results_folder = "8 gauss 0.2 egan/"
@@ -671,7 +684,7 @@ def main():
     # Set up your model here
     gan = ToyEGAN(opt)
     gan.train(results_folder)
-    """
+
 
     """
     #pokemon
@@ -686,7 +699,7 @@ def main():
     
     
     #MNIST
-    results_folder = "MNIST egan2/"
+    results_folder = "MNIST egan3/"
     # Change the default parameters if needed
     opt = MNISTEGANOptions()
     # Set up your model here
@@ -699,7 +712,7 @@ def main():
     #Celeba
     results_folder = "Celeba egan/"
     # Change the default parameters if needed
-    opt = CelebaGANOptions()
+    opt = CelebaEGANOptions()
     # Set up your model here
     gan = CelebaEGAN(opt)
     print(gan.generator)
