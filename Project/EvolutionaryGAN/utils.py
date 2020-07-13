@@ -12,7 +12,6 @@ def sample_noise(size):
     noise = -1 * torch.rand(size, 2) + 0.5
     return noise
 
-
 """ Estimates KDE for a sample
     Parameters:
         sample - sample from a generated distribution

@@ -28,7 +28,7 @@ class GeneratorLoss(nn.Module):
     def init_loss(self):
         raise NotImplementedError
 
-    # sunblasses should calculate loss and return it from this method
+    # subclasses should calculate loss and return it from this method
     @abstractmethod
     def loss(self, fake_prediction):
         raise NotImplementedError
@@ -91,7 +91,6 @@ class LeastSquares(GeneratorLoss):
         real_labels = self.get_target_labels(fake_prediction.shape, True)
         loss_fake = self.loss_func(fake_prediction, real_labels)
         return loss_fake
-
 
 def main():
     # Generator loss functions demonstration:

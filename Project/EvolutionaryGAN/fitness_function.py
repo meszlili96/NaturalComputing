@@ -1,5 +1,11 @@
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+import numpy as np
+import matplotlib.pyplot as plt
+
 from discr_loss import DiscriminatorLoss
-from simdata import *
+from simdata import StandardGaussian, EightInCircle, MixtureOfGaussiansDataset, SimulatedDistribution
 from itertools import islice
 import torch
 

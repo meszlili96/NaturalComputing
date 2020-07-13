@@ -1,8 +1,6 @@
 from utils import  set_seed
 from gan import ToyGAN, ToyOptions
 
-from torch.utils.tensorboard import SummaryWriter
-
 """To define a new GAN create generator and discriminator NNs with architecture you need and define
    a subclass of GAN object in gan.py file to return these NNs. Implement other methods appropriately.
    Then, create a shell script with GAN parameters. Change the model to use in main function.

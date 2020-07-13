@@ -1,0 +1,11 @@
+python3.7 ../../train_opt.py \
+--input_size 784 \
+--d_output_size 1 \
+--d_hidden_size 32 \
+--g_output_size 784 \
+--g_hidden_size 32 \
+--workers 1 \
+--batch_size 64 \
+--nz 100 \
+--num_epochs 100 \
+--gan_type "MNISTGAN"
