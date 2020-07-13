@@ -613,7 +613,7 @@ class ToyWGAN(GAN):
                     p.data.clamp_(-clip_value, clip_value)
 
                 # Train the generator every n_critic iterations
-                if i % n_critic == 0:
+                if (i + 1) % n_critic == 0:
                     ############################
                     # (2) Update Generator network
                     ###########################
@@ -627,9 +627,9 @@ class ToyWGAN(GAN):
                 # mean of discriminator prediction for real sample,
                 # mean of discriminator prediction for fake sample before discriminator was trained,
                 # mean of discriminator prediction for fake sample after discriminator was trained,
-                if i % 250 == 0:
+                if (i + 1) % 250 == 0:
                     print('[%d/%d][%d/%d]\tLoss_D: %.4f\tLoss_G: %.4f\tD(x): %.4f\tD(G(z)): %.4f / %.4f'
-                          % (epoch+1, num_epochs, i, steps_per_epoch,
+                          % (epoch+1, num_epochs, i + 1, steps_per_epoch,
                              d_loss, g_loss, real_out.mean().item(), fake_out.mean().item(), fake_out2.mean().item()))
 
             # After each epoch we save global statistics

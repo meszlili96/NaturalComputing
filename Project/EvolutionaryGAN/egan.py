@@ -224,7 +224,6 @@ class EGAN():
         fitness_sample_size = 1024
         fixed_noise = self.sample_noise(eval_sample_size)
         real_sample_fixed = self.real_sample(eval_sample_size)
-        print(self.gamma)
         ## for testing save function
         fake_sample_fixed = self.generator(fixed_noise)
         if not im_set:

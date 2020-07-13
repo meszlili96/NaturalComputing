@@ -16,14 +16,12 @@ class ToyDiscriminator(nn.Module):
         self.batch_norm = nn.BatchNorm1d(1)
         # Relu activation is for hidden layers
         self.relu = nn.ReLU()
-        # Sigmoid activation is for output binary classification layer
-        self.sigmoid = nn.Sigmoid()
 
     def forward(self, sample):
         x = self.relu(self.layer_1(sample))
         x = self.relu(self.batch_norm(self.layer_2(x)))
         x = self.relu(self.layer_3(x))
-        output = self.sigmoid(self.layer_out(x))
+        output = self.layer_out(x)
         return output
 
 class ToyGenerator(nn.Module):
@@ -47,7 +45,8 @@ class ToyGenerator(nn.Module):
         out_shape = output.shape
         # Reshape the output to discriminator input format
         return output.reshape((out_shape[0], 1, out_shape[1]))
-        
+
+
 class WassersteinToyDiscriminator(nn.Module):
     def __init__(self, hidden_dim=100):
         super(WassersteinToyDiscriminator, self).__init__()
