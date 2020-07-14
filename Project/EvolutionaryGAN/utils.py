@@ -46,7 +46,7 @@ def data_log_likelihood(gen_sample, real_data, stdev):
         results_folder -  a path to save the results
         filename - a specific KDE name
 """
-def save_kde(sample, target_distr, results_folder, filename):
+def save_kde(sample, target_distr, results_folder):
     x, y, _ = target_distr.distribution()
     xy = np.vstack([x.ravel(), y.ravel()]).T
 
@@ -56,7 +56,7 @@ def save_kde(sample, target_distr, results_folder, filename):
     z = np.exp(kernel.score_samples(xy)).reshape(x.shape)
     plt.figure()
     plt.imshow(z)
-    plt.savefig("{}/KDE {}.png".format(results_folder, filename))
+    plt.savefig("{}/KDE.png".format(results_folder))
 
 """ Selects the best bandwidth with CV
     Parameters:

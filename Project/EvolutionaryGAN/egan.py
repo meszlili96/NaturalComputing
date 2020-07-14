@@ -419,10 +419,10 @@ class ToyEGAN(EGAN):
     
     def save_statistics(self, fake_sample, results_folder):
         # will fail for image GAN
-        save_kde(fake_sample, self.dataset.distribution, results_folder, "test")
+        save_kde(fake_sample, self.dataset.distribution, results_folder)
 
         # Save fake sample log likelihood in case we want to use it later
-        with open("{}fs_ll.npy".format(results_folder), 'wb') as f:
+        with open("{}rs_ll.npy".format(results_folder), 'wb') as f:
             np.save(f, np.array(self.data_log_likelihoods))
 
         # Save fake sample log likelihood plot
@@ -430,7 +430,7 @@ class ToyEGAN(EGAN):
         plt.plot(self.data_log_likelihoods)
         plt.xlabel("Epoch")
         plt.ylabel("Data log likelohood")
-        plt.savefig("{}Real log likelihood.png".format(results_folder))
+        plt.savefig("{}rs_ll.png".format(results_folder))
 
         # Save fake sample log likelihood in case we want to use it later
         with open("{}hq_rate.npy".format(results_folder), 'wb') as f:
@@ -458,7 +458,7 @@ class ToyEGAN(EGAN):
 
         # Save generated sample y stdev in case we want to use it later
         with open("{}y_stdev.npy".format(results_folder), 'wb') as f:
-            np.save(f, np.array(self.stdev_x))
+            np.save(f, np.array(self.stdev_y))
 
         # Save high quality rate plot
         plt.figure(figsize=(10, 5))

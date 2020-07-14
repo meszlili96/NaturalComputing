@@ -182,7 +182,66 @@ class GAN():
     """
     def save_statistics(self, fake_sample, results_folder):
         # will fail for image GAN
-        save_kde(fake_sample, self.dataset.distribution, results_folder, "test")
+        save_kde(fake_sample, self.dataset.distribution, results_folder)
+
+        # Save fake sample log likelihood in case we want to use it later
+        with open("{}rs_ll.npy".format(results_folder), 'wb') as f:
+            np.save(f, np.array(self.data_log_likelihoods))
+
+        # Save fake sample log likelihood plot
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.data_log_likelihoods)
+        plt.xlabel("Epoch")
+        plt.ylabel("Data log likelohood")
+        plt.savefig("{}rs_ll.png".format(results_folder))
+
+        # Save fake sample log likelihood in case we want to use it later
+        with open("{}hq_rate.npy".format(results_folder), 'wb') as f:
+            np.save(f, np.array(self.hq_percentage))
+
+        # Save high quality rate plot
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.hq_percentage)
+        plt.axhline(y=1, color='tab:red')
+        plt.xlabel("Epoch")
+        plt.ylabel("High quality rate")
+        plt.savefig("{}hq_rate.png".format(results_folder))
+
+        # Save generated sample x stdev in case we want to use it later
+        with open("{}x_stdev.npy".format(results_folder), 'wb') as f:
+            np.save(f, np.array(self.stdev_x))
+
+        # Save high quality rate plot
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.stdev_x)
+        plt.axhline(y=self.dataset.distribution.stdev, color='tab:red')
+        plt.xlabel("Epoch")
+        plt.ylabel("X standard deviation")
+        plt.savefig("{}x_stdev.png".format(results_folder))
+
+        # Save generated sample y stdev in case we want to use it later
+        with open("{}y_stdev.npy".format(results_folder), 'wb') as f:
+            np.save(f, np.array(self.stdev_y))
+
+        # Save high quality rate plot
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.stdev_y)
+        plt.axhline(y=self.dataset.distribution.stdev, color='tab:red')
+        plt.xlabel("Epoch")
+        plt.ylabel("Y standard deviation")
+        plt.savefig("{}y_stdev.png".format(results_folder))
+
+        # Save generated sample JS-divergence in case we want to use it later
+        with open("{}jsd.npy".format(results_folder), 'wb') as f:
+            np.save(f, np.array(self.js_divergence))
+
+        # Save high quality rate plot
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.js_divergence)
+        plt.axhline(y=0, color='tab:red')
+        plt.xlabel("Epoch")
+        plt.ylabel("JSD(nats)")
+        plt.savefig("{}jsd.png".format(results_folder))
 
     """Returns real sample of the dataset
        Parameters:
