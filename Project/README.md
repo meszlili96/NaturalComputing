@@ -32,10 +32,10 @@ The results of all our experimenst can be found in [Google Drive folder](https:/
    - **selected_mutations_stats** - the statistics of selected mutations splitted by training stages.
    - **train_summary.png** - a plot of generator and discriminator losses per epoch.
 - **Simulated data experiments** - contains the reults of final experiments on simulated data. The saved plots and statistics is the same as for gamma tuning.
-- **MNIST experiments** - contains the reults of final experiments on simulated data. Each folder for a separate run has the following set of files:
+- **MNIST experiments** - contains the reults of final experiments on MNIST dataset. Each folder for a separate run has the following set of files:
    - **epoch N.png** - a sample of generated images obtained after the epoch number N.
    - **train_summary.png** - a plot of generator and discriminator losses per epoch.
-- **Celeba experiments** - contains the reults of final experiments on simulated data. The saved plots and statistics is the same as for MNIST.
+- **Celeba experiments** - contains the reults of final experiments on CelebA dataset. The saved plots and statistics is the same as for MNIST.
    
 ### The instructions to repeat the project results
 1. Install the requirements (it is probably easier to create a separate environment with conda):
